@@ -389,17 +389,20 @@ function ChessEngine.status(state)
 		return { text = "Stalemate — draw", check = false, checkmate = false, stalemate = true, gameOver = true, drawReason = "stalemate" }
 	end
 	local currentKey = positionKey(state)
-	if (state.positionCounts and state.positionCounts[currentKey] or 0) >= 3 then
-		return { text = "Draw — threefold repetition", check = check, checkmate = false, stalemate = false, gameOver = true, drawReason = "threefold repetition" }
+	local repetitionCount = state.positionCounts and state.positionCounts[currentKey] or 0
+	local canClaimThreefold = repetitionCount >= 3
+	local canClaimFiftyMove = (state.halfMove or 0) >= 100
+	if repetitionCount >= 5 then
+		return { text = "Draw — fivefold repetition", check = check, checkmate = false, stalemate = false, gameOver = true, drawReason = "fivefold repetition" }
 	end
-	if (state.halfMove or 0) >= 100 then
-		return { text = "Draw — fifty-move rule", check = check, checkmate = false, stalemate = false, gameOver = true, drawReason = "fifty-move rule" }
+	if (state.halfMove or 0) >= 150 then
+		return { text = "Draw — seventy-five-move rule", check = check, checkmate = false, stalemate = false, gameOver = true, drawReason = "seventy-five-move rule" }
 	end
 	if insufficientMaterial(state) then
 		return { text = "Draw — insufficient material", check = check, checkmate = false, stalemate = false, gameOver = true, drawReason = "insufficient material" }
 	end
-	if check then return { text = side .. " is in check", check = true, checkmate = false, stalemate = false, gameOver = false } end
-	return { text = side .. " to move", check = false, checkmate = false, stalemate = false, gameOver = false }
+	if check then return { text = side .. " is in check", check = true, checkmate = false, stalemate = false, gameOver = false, canClaimThreefold = canClaimThreefold, canClaimFiftyMove = canClaimFiftyMove } end
+	return { text = side .. " to move", check = false, checkmate = false, stalemate = false, gameOver = false, canClaimThreefold = canClaimThreefold, canClaimFiftyMove = canClaimFiftyMove }
 end
 
 function ChessEngine.copy(state)
