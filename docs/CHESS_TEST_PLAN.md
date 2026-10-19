@@ -30,3 +30,16 @@ This checklist is required before treating the prototype as tournament-ready. Th
 ## Known scope gaps
 - One shared board is still used by everyone in a server. Independent table IDs, separate match state, queue/matchmaking, reconnect/requeue, persistent ratings, repetition draws, the fifty-move rule, and insufficient-material draws are not implemented.
 - Run these tests with two Roblox Studio clients (Start Server + 2 Players) as well as a single client before publishing.
+
+
+## Cooperative team quiz
+- [ ] Start Studio server with at least three clients. Confirm first two are assigned to opposite sides and third can join White or Black.
+- [ ] Add a second human to White. Clicking a White piece opens the quiz for all White teammates and does not yet select/highlight the piece.
+- [ ] Submit a wrong answer: that player receives feedback and cannot answer again in the same quiz; other teammates can still answer.
+- [ ] The first correct answer closes the quiz and grants only that player control of the pending piece selection.
+- [ ] The quiz winner can select a legal destination; teammates who did not win cannot move the selected piece.
+- [ ] If nobody answers correctly within 20 seconds, the quiz closes and the team can retry by clicking a friendly piece.
+- [ ] When only one human is on a side, piece selection works without a quiz.
+- [ ] Joining a full team (3 players) is rejected; players cannot join both teams or switch teams during the match.
+- [ ] Resetting during a quiz clears the quiz and leaves no stale selection.
+- [ ] Test White team and Black team independently, including after check, captures, promotion, and game end.
