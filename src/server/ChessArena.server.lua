@@ -385,7 +385,7 @@ tryMove = function(toRow, toCol)
 	occupancy[key(toRow, toCol)] = piece
 	piece:SetAttribute("Row", toRow)
 	piece:SetAttribute("Col", toCol)
-	piece:PivotTo(CFrame.new(squarePosition(toRow, toCol, PIECE_Y)))
+	piece:PivotTo(CFrame.new(squarePosition(toRow, toCol, PIECE_Y)) * CFrame.Angles(0, 0, math.rad(90)))
 	selectedPiece = nil
 	currentTurn = currentTurn == "White" and "Black" or "White"
 	setStatus(currentTurn .. " to move")
