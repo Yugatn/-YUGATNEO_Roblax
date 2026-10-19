@@ -54,13 +54,6 @@ This checklist is required before treating the prototype as tournament-ready. Th
 - [ ] Click outside the board (desk, computer, phone booth, world props); no chess selection or move occurs.
 - [ ] Send malformed row/column values through a client test; server rejects them without changing state.
 
-## Study-area props
-- [ ] Computer desk, monitor, keyboard and display spawn to the side of the board without obstructing squares.
-- [ ] Computer prompt displays its informational status.
-- [ ] Phone booth, glass walls, sign, telephone body, keypad and handset spawn.
-- [ ] Phone prompt displays its informational status.
-
-
 ## Automated engine smoke test
 - [ ] Copy `tests/ChessEngineSmokeTest.lua` into a temporary Script under ServerScriptService.
 - [ ] Run Play and confirm Output reports perft depth 1 = 20, depth 2 = 400, and depth 3 = 8902.
@@ -84,3 +77,10 @@ This checklist is required before treating the prototype as tournament-ready. Th
 - [ ] Test king versus king and king+bishop versus king; verify insufficient-material draw.
 - [ ] Verify checkmate and stalemate take precedence over move-count draw thresholds.
 - [ ] Verify a player cannot claim a draw when it is not their side's turn or no claim condition is met.
+
+
+## Clean arena regression
+- [ ] Confirm the four watchtowers, fence rails, telescopes, target range, reaction pad, memory pads, computer desk, and phone booth no longer spawn.
+- [ ] Confirm the chessboard, status panel, compact floor, and green chess-view pad remain.
+- [ ] Step onto the chess-view pad and use EXIT; confirm the original camera is restored.
+- [ ] Confirm no telescope-specific camera UI or actions remain.
