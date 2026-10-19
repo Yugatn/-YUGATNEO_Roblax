@@ -1,47 +1,45 @@
-# YUGATNEO Roblox — Chess Arena
+# YUGATNEO Roblox — Chess Arena + Weapons
 
-Playable multiplayer chess for Roblox (YUGATNEO). Development branch: `feature/full-chess-game`.
+Branch: `feature/full-chess-game`
 
-## How to play (in Studio)
+## Chess
 
 1. `git switch feature/full-chess-game && git pull`
 2. `rojo serve default.project.json`
-3. Connect Rojo plugin in Roblox Studio → **Play**
-4. Walk to a **blue Join Pad** near a table → hold **E** (ProximityPrompt)
-5. Second player joins the same pad → both press **I'M READY**
-6. Click your piece → green squares show legal moves → click destination
-7. Camera locks to the board (Scriptable) for the match; returns to normal when you leave
+3. Play in Studio → walk to **blue Join Pad** → hold **E**
+4. Second player joins → both press **I'M READY**
+5. Click piece → green legal squares → click destination
 
-Three independent tables spawn at X = 0, +55, −55.
+Three tables at X = 0, +55, −55. Camera locks (Scriptable) during the match.
 
-## What works now
+### Rules
+- Legal moves, check / checkmate / stalemate
+- Castling, en passant, promotion choice
+- **Fifty-move rule** (auto-draw at 100 half-moves without capture/pawn move)
+- **Threefold repetition** (auto-draw)
+- Resign, mutual draw offer, disconnect = technical loss
 
-- Full legal moves, check / checkmate / stalemate, castling, en passant, promotion choice
-- Server-authoritative rules (`ChessEngine`)
-- Isolated tables (`MatchTable`) with FSM: Idle → Waiting → Ready → Playing → Finished → Idle
-- Only seated players can move; only on their turn
-- Disconnect during play = technical loss for that player
-- Cancel waiting frees the seat
-- Scriptable camera fixed on the table (no vertical camera fight)
-- Modes field ready: Classic / Wager / Challenge (economy later)
+## Weapons (outside chess matches)
 
-## Not yet
+| Key | Weapon | Damage | Range |
+|-----|--------|--------|-------|
+| 1 | Pistol | 18 | 180 |
+| 2 | Rifle | 28 | 320 |
+| 3 | SMG | 12 | 140 |
 
-- Virtual currency / stakes
-- Friendly challenges (push-ups etc.)
-- Fifty-move / threefold / insufficient material draws
-- Live verification inside Roblox Studio from CI (use local Play)
+Left mouse button fires. Shooting is **blocked** while `InChessMatch` is true (seated at a table).
 
 ## Files
 
-| Path | Role |
-|------|------|
-| `src/server/ChessEngine.lua` | Pure rules engine |
-| `src/server/MatchTable.lua` | One table: board, seats, FSM |
-| `src/server/ChessArena.server.lua` | Spawns 3 tables, routes events |
-| `src/client/ChessControls.client.lua` | HUD + Scriptable camera |
-| `default.project.json` | Rojo map |
+- `src/server/ChessEngine.lua` — rules + draws
+- `src/server/MatchTable.lua` — one table
+- `src/server/ChessArena.server.lua` — 3 tables, membership
+- `src/server/WeaponSystem.server.lua` — loadout + raycast
+- `src/client/ChessControls.client.lua` — chess HUD + camera
+- `src/client/WeaponControls.client.lua` — weapon HUD
 
-## Branch
+## Known limits
 
-https://github.com/Yugatn/-YUGATNEO_Roblax/tree/feature/full-chess-game
+- Piece models are procedural (improved silhouettes, not MeshId assets)
+- No wager / challenge modes yet
+- Not play-tested inside Studio from this environment
