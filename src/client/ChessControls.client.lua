@@ -141,6 +141,7 @@ local resetButton = makeButton("ResetButton", "NEW GAME", 196, 130, 92, COLORS.r
 local botButton = makeButton("PlayBotButton", "PLAY VS BOT", 12, 220, 276, COLORS.green)
 local joinWhiteButton = makeButton("JoinWhiteTeamButton", "JOIN WHITE TEAM", 12, 264, 134, COLORS.blue)
 local joinBlackButton = makeButton("JoinBlackTeamButton", "JOIN BLACK TEAM", 154, 264, 134, COLORS.red)
+local claimDrawButton = makeButton("ClaimDrawButton", "CLAIM DRAW", 12, 308, 276, Color3.fromRGB(112, 93, 54))
 
 local tip = Instance.new("TextLabel")
 tip.Name = "Tip"
@@ -216,6 +217,9 @@ joinWhiteButton.Activated:Connect(function()
 end)
 joinBlackButton.Activated:Connect(function()
 	controlEvent:FireServer("JoinTeam", "Black")
+end)
+claimDrawButton.Activated:Connect(function()
+	controlEvent:FireServer("ClaimDraw")
 end)
 
 
@@ -482,6 +486,8 @@ controlEvent.OnClientEvent:Connect(function(action, payload, fromRow, fromCol)
 		statusLabel.Text = tostring(payload)
 		if string.find(string.lower(tostring(payload)), "checkmate") or string.find(string.lower(tostring(payload)), "stalemate") then
 			statusDot.BackgroundColor3 = COLORS.red
+		elseif string.find(string.lower(tostring(payload)), "draw") then
+			statusDot.BackgroundColor3 = COLORS.gold
 		elseif string.find(string.lower(tostring(payload)), "check") then
 			statusDot.BackgroundColor3 = COLORS.gold
 		else

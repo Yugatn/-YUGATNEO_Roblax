@@ -668,6 +668,30 @@ controlEvent.OnServerEvent:Connect(function(player, action, choice)
 			pendingPromotionUserId = nil
 			tryMove(pending.row, pending.col, choice, player)
 		end
+	elseif action == "ClaimDraw" then
+		if gameOver then return end
+		if playerSides[player.UserId] ~= currentTurn then
+			controlEvent:FireClient(player, "Status", "Only the player whose turn it is can claim a draw.")
+			return
+		end
+		local status = ChessEngine.status(engineState)
+		if status.canClaimThreefold then
+			gameOver = true
+			selectedPiece = nil
+			selectedTile = nil
+			selectedByUserId = nil
+			controlEvent:FireAllClients("ClearHighlights")
+			setStatus("Draw claimed — threefold repetition")
+		elseif status.canClaimFiftyMove then
+			gameOver = true
+			selectedPiece = nil
+			selectedTile = nil
+			selectedByUserId = nil
+			controlEvent:FireAllClients("ClearHighlights")
+			setStatus("Draw claimed — fifty-move rule")
+		else
+			controlEvent:FireClient(player, "Status", "A draw cannot be claimed in the current position.")
+		end
 	elseif action == "Reset" then
 		if player.UserId == hostUserId and seatPlayers.White and seatPlayers.Black then
 			resetGame()
