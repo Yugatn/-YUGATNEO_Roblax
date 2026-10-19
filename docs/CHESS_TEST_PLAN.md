@@ -73,3 +73,14 @@ This checklist is required before treating the prototype as tournament-ready. Th
 - [ ] Click the board while it is the opponent's turn; the player receives a clear status message rather than a silent failure.
 - [ ] Click the computer monitor, phone booth, avatar, and empty world; none should be treated as a chess square.
 - [ ] Test on a wide desktop viewport and a narrow viewport to check screen-coordinate raycasting.
+
+
+## Draw rules regression
+- [ ] Run `tests/ChessEngineSmokeTest.lua` in Studio and confirm perft depth 1–3 = 20, 400, 8902.
+- [ ] Repeat the knight shuffle until the starting position has occurred three times; verify the game remains active and **CLAIM DRAW** succeeds for the side to move.
+- [ ] Repeat the knight shuffle until the starting position has occurred five times; verify automatic draw.
+- [ ] Set a legal test position to 100 half-moves without pawn moves or captures; verify draw is claimable but not automatic.
+- [ ] Set a legal test position to 150 half-moves; verify automatic draw.
+- [ ] Test king versus king and king+bishop versus king; verify insufficient-material draw.
+- [ ] Verify checkmate and stalemate take precedence over move-count draw thresholds.
+- [ ] Verify a player cannot claim a draw when it is not their side's turn or no claim condition is met.
