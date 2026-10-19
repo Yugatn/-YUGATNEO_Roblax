@@ -1,6 +1,6 @@
 # YUGATNEO Roblox — Chess Arena
 
-A Roblox Studio chess game prototype for the YUGATNEO world. The active development branch `feature/full-chess-game` adds a server-side rules engine and a redesigned in-game HUD.
+A Roblox Studio chess game prototype for the YUGATNEO world. This branch adds a top-down board-view camera to the server-side chess rules engine and in-game HUD. Changes still require live verification in Roblox Studio.
 
 ## Included in this development branch
 
@@ -23,9 +23,9 @@ A Roblox Studio chess game prototype for the YUGATNEO world. The active developm
 - Automated tests and live Roblox Studio verification are still required before treating the rules engine as tournament-ready.
 
 ## Top-down chess interaction
-- A green walk-on pad is placed beside the chessboard. Stepping onto it switches the local camera to a top-down view; use the on-screen **EXIT** control to return to the normal camera.
+- A green walk-on pad is placed beside the chessboard. Stepping onto it switches the local camera to a stable oblique overhead view, calculated from the board center and viewport. Use the on-screen **EXIT** control to restore the previous camera state.
 - Select a piece and click a highlighted green square. The server validates legal moves through `ChessEngine`, including check restrictions and special chess moves supported by the engine.
-- This is a shared-board prototype. The new camera pad and interaction should be verified in Roblox Studio with both mouse and keyboard controls before publishing.
+- This is still a shared-board prototype. Independent table IDs and simultaneous separate matches are not implemented. See [`docs/CHESS_TEST_PLAN.md`](docs/CHESS_TEST_PLAN.md) for the camera, move legality, special-rule, and bot test checklist; these tests have not been run automatically in Roblox Studio.
 
 ## Run in Roblox Studio
 
@@ -39,11 +39,11 @@ If Rojo is already running on port 34872, do not launch a second server. Use the
 
 ## GitHub and branches
 
-The feature is being developed on `feature/full-chess-game`; `main` remains unchanged while the new rules and UI are reviewed. To test this branch locally:
+This work is isolated on `feature/chess-topdown-interaction`; `main` remains unchanged while the changes are reviewed. To test this branch locally:
 
 ```bash
 git fetch origin
-git switch feature/full-chess-game
+git switch feature/chess-topdown-interaction
 git pull
 ```
 
