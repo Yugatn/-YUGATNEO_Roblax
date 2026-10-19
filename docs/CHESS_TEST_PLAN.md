@@ -47,12 +47,17 @@ This checklist is required before treating the prototype as tournament-ready. Th
 
 
 ## Dual-board synchronization
-- [ ] Confirm both boards spawn with 32 pieces and correct starting positions.
-- [ ] On the White board, select a piece and move it; verify the corresponding piece changes on the Black board.
-- [ ] Repeat a capture, castling move, en-passant capture, and promotion; verify both boards remain identical.
-- [ ] Reset the game; verify both boards return to the starting position.
-- [ ] With two Studio clients, verify the first is assigned White and the second Black, and each can play only on their own turn.
-- [ ] Confirm White and Black view pads point at the correct board from opposite sides.
+- [ ] Confirm exactly one board spawns with 32 pieces in the correct starting position.
+- [ ] Confirm green White and blue Black player fields spawn on opposite sides of the same board.
+- [ ] Approach White field and press E; verify player is assigned White.
+- [ ] With a second client, approach Black field and press E; verify player is assigned Black and the match begins.
+- [ ] Verify a third client cannot claim an occupied side.
+- [ ] Verify the HUD does not claim both seats are occupied while both fields are empty.
+- [ ] On the single board, select a piece and move it; verify the same board updates correctly.
+- [ ] Repeat a capture, castling move, en-passant capture, and promotion; verify the single board remains consistent with the chess engine.
+- [ ] Reset the game; verify the single board returns to the starting position.
+- [ ] With two Studio clients, verify each must claim an opposite field, and each can play only on their own turn.
+- [ ] Confirm White and Black fields point the camera at the same board from opposite sides.
 
 ## Mouse input regression
 - [ ] In either board-view mode, click the visible body of a piece; the correct logical square is selected and both boards show matching highlights.
@@ -90,6 +95,6 @@ This checklist is required before treating the prototype as tournament-ready. Th
 
 ## Clean arena regression
 - [ ] Confirm the four watchtowers, fence rails, telescopes, target range, reaction pad, memory pads, computer desk, and phone booth no longer spawn.
-- [ ] Confirm both chessboards, status panel, compact floor, and both chess-view pads remain.
+- [ ] Confirm one chessboard, status panel, compact floor, and both player fields remain; no second board is created.
 - [ ] Step onto the chess-view pad and use EXIT; confirm the original camera is restored.
 - [ ] Confirm no telescope-specific camera UI or actions remain.
