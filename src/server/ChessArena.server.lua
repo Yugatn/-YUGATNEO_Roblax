@@ -70,6 +70,7 @@ local pendingPromotion = nil
 local pendingPromotionUserId = nil
 local selectedByUserId = nil
 local gameOver = false
+local matchStarted = false
 local botEnabled = false
 local botThinking = false
 local botMove
@@ -153,6 +154,7 @@ Players.PlayerRemoving:Connect(function(player)
 			seatPlayers[side] = next(teamMembers[side])
 		end
 		if seatPlayers[side] == nil then
+			matchStarted = false
 			gameOver = true
 			pendingPromotion = nil
 			pendingPromotionUserId = nil
@@ -403,6 +405,7 @@ local function isValidMove(piece, toRow, toCol)
 end
 
 tryMove = function(toRow, toCol, promotionChoice, player)
+	if not matchStarted then return end
 	if gameOver then return end
 	if not player or playerSides[player.UserId] ~= currentTurn then return end
 	if selectedByUserId ~= player.UserId then return end
@@ -491,7 +494,7 @@ tryMove = function(toRow, toCol, promotionChoice, player)
 end
 
 botMove = function()
-	if botThinking or not botEnabled or gameOver or currentTurn ~= "Black" then return end
+	if botThinking or not matchStarted or not botEnabled or gameOver or currentTurn ~= "Black" then return end
 	botThinking = true
 	local candidates = ChessEngine.allLegalMoves(engineState, "Black")
 	if #candidates == 0 then
@@ -539,6 +542,7 @@ local function resetGame()
 	pendingPromotion = nil
 	pendingPromotionUserId = nil
 	gameOver = false
+	matchStarted = seatPlayers.White ~= nil and seatPlayers.Black ~= nil
 	currentTurn = "White"
 	engineState = ChessEngine.newGame()
 	for col = 1, 8 do
@@ -547,7 +551,11 @@ local function resetGame()
 		makePiece(backRank[col], "Black", 8, col)
 		makePiece("Pawn", "Black", 7, col)
 	end
-	setStatus("Choose a side: step onto the White or Black field.")
+	if matchStarted then
+		setStatus("Both players ready — White to move")
+	else
+		setStatus("Choose a side: step onto the White or Black field.")
+	end
 end
 
 controlEvent.OnServerEvent:Connect(function(player, action, choice)
@@ -560,6 +568,10 @@ controlEvent.OnServerEvent:Connect(function(player, action, choice)
 		local row, col = tonumber(choice.row), tonumber(choice.col)
 		if not row or not col or row % 1 ~= 0 or col % 1 ~= 0 or not inside(row, col) then
 			controlEvent:FireClient(player, "Status", "Invalid board square. Click a visible square.")
+			return
+		end
+		if not matchStarted then
+			controlEvent:FireClient(player, "Status", "Waiting for the other player to join the opposite field.")
 			return
 		end
 		if gameOver then
@@ -700,6 +712,10 @@ controlEvent.OnServerEvent:Connect(function(player, action, choice)
 			tryMove(pending.row, pending.col, choice, player)
 		end
 	elseif action == "ClaimDraw" then
+		if not matchStarted then
+			controlEvent:FireClient(player, "Status", "A game starts when both player fields are occupied.")
+			return
+		end
 		if gameOver then return end
 		if playerSides[player.UserId] ~= currentTurn then
 			controlEvent:FireClient(player, "Status", "Only the player whose turn it is can claim a draw.")
@@ -792,8 +808,8 @@ local function makePlayerField(name, side, position, color)
 	corner.Parent = label
 	return field
 end
-local whiteField = makePlayerField("WhitePlayerField", "White", Vector3.new(0, 0.35, 24), Color3.fromRGB(64, 170, 125))
-local blackField = makePlayerField("BlackPlayerField", "Black", Vector3.new(0, 0.35, -24), Color3.fromRGB(70, 125, 190))
+local whiteField = makePlayerField("WhitePlayerField", "White", Vector3.new(0, 0.35, -24), Color3.fromRGB(64, 170, 125))
+local blackField = makePlayerField("BlackPlayerField", "Black", Vector3.new(0, 0.35, 24), Color3.fromRGB(70, 125, 190))
 
 local function claimSide(player, side)
 	if side ~= "White" and side ~= "Black" then return end
