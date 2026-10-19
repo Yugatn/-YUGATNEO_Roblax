@@ -1,6 +1,6 @@
 # YUGATNEO Roblox — Chess Arena
 
-A Roblox Studio chess game prototype for the YUGATNEO world. This branch uses one shared chessboard and two separate player fields on opposite sides. Each field has an `E` interaction prompt to claim White or Black. It also includes robust mouse-to-square mapping and automatic overhead view for bot practice. Changes still require live verification in Roblox Studio.
+A Roblox Studio chess game prototype for the YUGATNEO world. This branch uses one shared chessboard and two separate player fields on opposite sides. Stepping onto a field claims White or Black automatically. It also includes robust mouse-to-square mapping and automatic overhead view for bot practice. Changes still require live verification in Roblox Studio.
 
 ## Included in this development branch
 
@@ -23,7 +23,7 @@ A Roblox Studio chess game prototype for the YUGATNEO world. This branch uses on
 - Automated tests and live Roblox Studio verification are still required before treating the rules engine as tournament-ready.
 
 ## Top-down chess interaction
-- A green White player field and blue Black player field sit on opposite sides of the same board. Approach a field and press `E` to claim that side; stepping onto either field also switches the local camera to an overhead-oblique view of the single board. Pressing **PLAY VS BOT** also opens White's board view automatically. Use **EXIT** to restore the previous camera state.
+- A green White player field and blue Black player field sit on opposite sides of the same board. Step onto either field to claim that side; entering a field also switches the local camera to an overhead-oblique view of the single board. Pressing **PLAY VS BOT** also opens White's board view automatically. Use **EXIT** to restore the previous camera state.
 - Select a piece and click a highlighted green square. The server validates legal moves through `ChessEngine`, including check restrictions and special chess moves supported by the engine.
 - Both players use the same board and match state. Independent table IDs and simultaneous separate matches are not implemented. See [`docs/CHESS_TEST_PLAN.md`](docs/CHESS_TEST_PLAN.md) for the camera, move legality, special-rule, and bot test checklist; these tests have not been run automatically in Roblox Studio.
 
