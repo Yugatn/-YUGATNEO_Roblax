@@ -81,6 +81,7 @@ local botEnabled = false
 local botThinking = false
 local botMove
 local tryMove
+local handleBoardClick
 
 -- One physical board; players occupy separate fields on opposite sides.
 -- The first player to claim a field is White, the second is Black.
@@ -237,6 +238,17 @@ local function makePiece(pieceType, side, row, col)
 	base.CFrame = CFrame.new(squarePosition(row, col, PIECE_Y)) * CFrame.Angles(0, 0, math.rad(90))
 	base.Parent = model
 	model.PrimaryPart = base
+	local pieceClick = Instance.new("ClickDetector")
+	pieceClick.Name = "ChessPieceClick"
+	pieceClick.MaxActivationDistance = 128
+	pieceClick.Parent = base
+	pieceClick.MouseClick:Connect(function(player)
+		local pieceRow = model:GetAttribute("Row")
+		local pieceCol = model:GetAttribute("Col")
+		if handleBoardClick and pieceRow and pieceCol then
+			handleBoardClick(player, { row = pieceRow, col = pieceCol })
+		end
+	end)
 
 	local function cylinder(name, diameter, height, y, partColor)
 		local p = Instance.new("Part")
@@ -380,6 +392,13 @@ for row = 1, 8 do
 		tile.Parent = boardFolder
 		tile:SetAttribute("Row", row)
 		tile:SetAttribute("Col", col)
+		local tileClick = Instance.new("ClickDetector")
+		tileClick.Name = "ChessSquareClick"
+		tileClick.MaxActivationDistance = 128
+		tileClick.Parent = tile
+		tileClick.MouseClick:Connect(function(player)
+			if handleBoardClick then handleBoardClick(player, { row = row, col = col }) end
+		end)
 		tiles[row][col] = tile
 
 		-- The client sends a square coordinate; server-side rules validate every requested move.
@@ -564,8 +583,7 @@ local function resetGame()
 	end
 end
 
-controlEvent.OnServerEvent:Connect(function(player, action, choice)
-	if action == "BoardClick" then
+handleBoardClick = function(player, choice)
 		if typeof(choice) ~= "table" then return end
 		local now = os.clock()
 		if now - (lastBoardRequestAt[player.UserId] or 0) < 0.04 then return end
@@ -615,6 +633,11 @@ controlEvent.OnServerEvent:Connect(function(player, action, choice)
 		else
 			controlEvent:FireClient(player, "Status", "Select one of your " .. currentTurn .. " pieces first.")
 		end
+end
+
+controlEvent.OnServerEvent:Connect(function(player, action, choice)
+	if action == "BoardClick" then
+		handleBoardClick(player, choice)
 	elseif action == "JoinField" then
 		local side = choice
 		if side == "White" or side == "Black" then
