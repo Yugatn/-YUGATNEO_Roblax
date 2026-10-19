@@ -550,4 +550,3 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
 	clickSequence += 1
 	controlEvent:FireServer("BoardClick", { row = row, col = col, sequence = clickSequence })
 end)
-end)
