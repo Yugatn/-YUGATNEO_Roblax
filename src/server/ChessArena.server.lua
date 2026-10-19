@@ -1,6 +1,5 @@
 -- YUGATNEO Roblox Chess Arena
--- Prototype: legal piece movement and captures, but no check/checkmate,
--- castling, en passant, or pawn promotion yet.
+-- Server-authoritative chess rules powered by ChessEngine.
 
 local Players = game:GetService("Players")
 local ChessEngine = require(script.Parent:WaitForChild("ChessEngine"))
@@ -58,6 +57,7 @@ statusLabel.Parent = surfaceGui
 
 local function setStatus(text)
 	statusLabel.Text = "YUGATNEO CHESS\n" .. text
+	controlEvent:FireAllClients("Status", text)
 end
 
 local tiles = {}
@@ -255,9 +255,12 @@ local function makePiece(pieceType, side, row, col)
 			if model:GetAttribute("Side") == currentTurn then
 				if selectedPiece == model then
 					selectedPiece = nil
+					controlEvent:FireAllClients("ClearHighlights")
 					setStatus(currentTurn .. " to move")
 				else
 					selectedPiece = model
+					local legal = ChessEngine.legalMoves(engineState, currentRow, currentCol)
+					controlEvent:FireAllClients("LegalMoves", legal, currentRow, currentCol)
 					setStatus(currentTurn .. " to move | Selected: " .. pieceType)
 				end
 			elseif selectedPiece then
@@ -388,6 +391,7 @@ tryMove = function(toRow, toCol)
 	end
 
 	selectedPiece = nil
+	controlEvent:FireAllClients("ClearHighlights")
 	currentTurn = engineState.turn
 	local status = ChessEngine.status(engineState)
 	setStatus(status.text)
@@ -415,6 +419,7 @@ controlEvent.OnServerEvent:Connect(function(player, action)
 		resetGame()
 	elseif action == "Deselect" then
 		selectedPiece = nil
+		controlEvent:FireAllClients("ClearHighlights")
 		setStatus(currentTurn .. " to move")
 	end
 end)
