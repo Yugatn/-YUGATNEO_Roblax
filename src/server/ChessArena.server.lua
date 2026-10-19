@@ -720,6 +720,89 @@ local function worldPart(name, size, position, color, material, parent)
 	return p
 end
 
+
+-- Small study table with a desktop computer, placed beside (not over) the chessboard.
+local studyDesk = worldPart("StudyComputerDesk", Vector3.new(9, 0.7, 4.5), Vector3.new(31, 2.1, 13), Color3.fromRGB(94, 65, 45), Enum.Material.Wood)
+for _, legOffset in ipairs({Vector3.new(-3.7, -1.1, -1.6), Vector3.new(3.7, -1.1, -1.6), Vector3.new(-3.7, -1.1, 1.6), Vector3.new(3.7, -1.1, 1.6)}) do
+	worldPart("StudyDeskLeg", Vector3.new(0.45, 2.2, 0.45), studyDesk.Position + legOffset, Color3.fromRGB(56, 43, 35), Enum.Material.Wood)
+end
+local computerBase = worldPart("ComputerStand", Vector3.new(1.4, 0.25, 1), Vector3.new(31, 2.65, 12.4), Color3.fromRGB(35, 40, 48), Enum.Material.Metal)
+local computerMonitor = worldPart("ComputerMonitor", Vector3.new(3.4, 2.3, 0.3), Vector3.new(31, 3.8, 12.9), Color3.fromRGB(24, 29, 38), Enum.Material.Metal)
+local monitorScreen = worldPart("ComputerScreen", Vector3.new(3.05, 1.92, 0.08), Vector3.new(31, 3.83, 12.69), Color3.fromRGB(65, 196, 151), Enum.Material.Neon)
+monitorScreen.CanCollide = false
+local screenGui = Instance.new("SurfaceGui")
+screenGui.Name = "StudyComputerDisplay"
+screenGui.Face = Enum.NormalId.Front
+screenGui.PixelsPerStud = 45
+screenGui.Parent = monitorScreen
+local screenText = Instance.new("TextLabel")
+screenText.Size = UDim2.fromScale(1, 1)
+screenText.BackgroundColor3 = Color3.fromRGB(12, 24, 29)
+screenText.BackgroundTransparency = 0.05
+screenText.TextColor3 = Color3.fromRGB(120, 255, 190)
+screenText.Font = Enum.Font.Code
+screenText.TextScaled = true
+screenText.Text = "YUGATNEO\nSTUDY TERMINAL\n\nLEARN • PLAY • GROW"
+screenText.Parent = screenGui
+worldPart("ComputerKeyboard", Vector3.new(2.8, 0.12, 0.85), Vector3.new(31, 2.55, 10.8), Color3.fromRGB(37, 43, 53), Enum.Material.SmoothPlastic)
+local computerPrompt = Instance.new("ProximityPrompt")
+computerPrompt.ActionText = "Use computer"
+computerPrompt.ObjectText = "Study terminal"
+computerPrompt.HoldDuration = 0.3
+computerPrompt.MaxActivationDistance = 9
+computerPrompt.Parent = computerMonitor
+computerPrompt.Triggered:Connect(function(player)
+	controlEvent:FireClient(player, "Status", "Study terminal: chess practice and learning tools will be available here.")
+end)
+
+-- A small walk-in phone booth with a visible handset and keypad.
+local boothX, boothZ = -31, 13
+local boothFrame = Color3.fromRGB(139, 42, 39)
+local boothGlass = Color3.fromRGB(115, 194, 203)
+for _, offset in ipairs({Vector3.new(-3, 5, -3), Vector3.new(3, 5, -3), Vector3.new(-3, 5, 3), Vector3.new(3, 5, 3)}) do
+	local post = worldPart("PhoneBoothPost", Vector3.new(0.45, 10, 0.45), Vector3.new(boothX, 0, boothZ) + offset, boothFrame, Enum.Material.Metal)
+	post.CanCollide = true
+end
+worldPart("PhoneBoothRoof", Vector3.new(6.8, 0.55, 6.8), Vector3.new(boothX, 10.2, boothZ), boothFrame, Enum.Material.Metal)
+worldPart("PhoneBoothBack", Vector3.new(6.2, 9.2, 0.25), Vector3.new(boothX, 5, boothZ - 3), boothGlass, Enum.Material.Glass).Transparency = 0.35
+worldPart("PhoneBoothLeftGlass", Vector3.new(0.2, 9.2, 5.8), Vector3.new(boothX - 3, 5, boothZ), boothGlass, Enum.Material.Glass).Transparency = 0.45
+worldPart("PhoneBoothRightGlass", Vector3.new(0.2, 9.2, 5.8), Vector3.new(boothX + 3, 5, boothZ), boothGlass, Enum.Material.Glass).Transparency = 0.45
+worldPart("PhoneBoothSign", Vector3.new(5.2, 0.8, 0.3), Vector3.new(boothX, 9.3, boothZ + 3.05), Color3.fromRGB(220, 198, 117), Enum.Material.SmoothPlastic)
+local phoneSign = worldPart("PhoneBoothSignText", Vector3.new(4.8, 0.55, 0.12), Vector3.new(boothX, 9.3, boothZ + 2.84), Color3.fromRGB(48, 38, 31), Enum.Material.SmoothPlastic)
+phoneSign.CanCollide = false
+local signGui = Instance.new("SurfaceGui")
+signGui.Face = Enum.NormalId.Front
+signGui.Parent = phoneSign
+local signText = Instance.new("TextLabel")
+signText.Size = UDim2.fromScale(1, 1)
+signText.BackgroundTransparency = 1
+signText.Text = "PHONE"
+signText.TextColor3 = Color3.fromRGB(255, 233, 171)
+signText.Font = Enum.Font.GothamBlack
+signText.TextScaled = true
+signText.Parent = signGui
+local phoneBody = worldPart("PublicTelephone", Vector3.new(1.4, 2.3, 0.55), Vector3.new(boothX, 5.4, boothZ - 2.55), Color3.fromRGB(40, 45, 52), Enum.Material.Metal)
+local phoneDisplay = worldPart("PhoneDisplay", Vector3.new(0.85, 0.4, 0.08), Vector3.new(boothX, 6, boothZ - 2.84), Color3.fromRGB(75, 211, 157), Enum.Material.Neon)
+phoneDisplay.CanCollide = false
+for index = 1, 3 do
+	for col = 1, 3 do
+		local keyPart = worldPart("PhoneKey", Vector3.new(0.16, 0.16, 0.08), Vector3.new(boothX - 0.28 + (col - 1) * 0.28, 5.35 - (index - 1) * 0.28, boothZ - 2.86), Color3.fromRGB(225, 224, 215), Enum.Material.SmoothPlastic)
+		keyPart.CanCollide = false
+	end
+end
+local handset = worldPart("TelephoneHandset", Vector3.new(0.3, 1.2, 0.3), Vector3.new(boothX + 0.7, 6.3, boothZ - 2.55), Color3.fromRGB(20, 24, 29), Enum.Material.SmoothPlastic)
+handset.Shape = Enum.PartType.Cylinder
+handset.CFrame = CFrame.new(handset.Position) * CFrame.Angles(0, 0, math.rad(90))
+local phonePrompt = Instance.new("ProximityPrompt")
+phonePrompt.ActionText = "Use telephone"
+phonePrompt.ObjectText = "Public phone booth"
+phonePrompt.HoldDuration = 0.35
+phonePrompt.MaxActivationDistance = 8
+phonePrompt.Parent = phoneBody
+phonePrompt.Triggered:Connect(function(player)
+	controlEvent:FireClient(player, "Status", "Telephone booth: the public line is ready. More destinations can be connected later.")
+end)
+
 local fenceColor = Color3.fromRGB(42, 50, 63)
 local trimColor = Color3.fromRGB(226, 177, 73)
 local fenceY, fenceRadius = 8, 72
