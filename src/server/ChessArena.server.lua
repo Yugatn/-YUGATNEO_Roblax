@@ -356,34 +356,6 @@ local function makePiece(pieceType, side, row, col)
 	model.Parent = piecesFolder
 	occupancy[key(row, col)] = model
 
-	local function onPieceClicked(player)
-		if gameOver or pendingPromotion then return end
-		if playerSides[player.UserId] ~= currentTurn then return end
-		local currentRow = model:GetAttribute("Row")
-		local currentCol = model:GetAttribute("Col")
-		if model.Parent and occupancy[key(currentRow, currentCol)] == model then
-			if model:GetAttribute("Side") == currentTurn then
-				if selectedPiece == model and selectedByUserId == player.UserId then
-					selectedPiece = nil
-					selectedByUserId = nil
-					controlEvent:FireAllClients("ClearHighlights")
-					setStatus(currentTurn .. " to move")
-				else
-					if startTeamQuiz(currentTurn, currentRow, currentCol, pieceType) then
-						return
-					end
-					selectedPiece = model
-					selectedByUserId = player.UserId
-					local legal = ChessEngine.legalMoves(engineState, currentRow, currentCol)
-					controlEvent:FireAllClients("LegalMoves", legal, currentRow, currentCol)
-					setStatus(currentTurn .. " to move | Selected: " .. pieceType)
-				end
-			elseif selectedPiece then
-				-- Clicking an opposing piece attempts to capture it on its square.
-				tryMove(currentRow, currentCol, nil, player)
-			end
-		end
-	end
 
 	-- Mouse selection is handled by the client raycast and validated by the server.
 	-- Avoid overlapping ClickDetectors on the many decorative parts of each piece.
@@ -453,6 +425,12 @@ tryMove = function(toRow, toCol, promotionChoice, player)
 	local fromRow, fromCol = piece:GetAttribute("Row"), piece:GetAttribute("Col")
 	local side = piece:GetAttribute("Side")
 	local pieceType = piece:GetAttribute("PieceType")
+	-- Validate the destination before asking for promotion; otherwise any last-rank square
+	-- could open a promotion dialog even when the pawn cannot legally move there.
+	if pieceType == "Pawn" and (toRow == 1 or toRow == 8) and not isValidMove(piece, toRow, toCol) then
+		setStatus(currentTurn .. " to move | Illegal move")
+		return
+	end
 	if pieceType == "Pawn" and (toRow == 1 or toRow == 8) and not promotionChoice then
 		pendingPromotion = { row = toRow, col = toCol }
 		pendingPromotionUserId = player.UserId
