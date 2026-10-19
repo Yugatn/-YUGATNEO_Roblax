@@ -1,0 +1,67 @@
+name: Validate and publish Roblox place
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      publish:
+        description: "Publish the built place to Roblox (requires repository secrets)"
+        required: true
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build Rojo project
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+      - name: Install Rojo
+        uses: rojo-rbx/setup-rojo@v1
+      - name: Build Roblox place
+        run: rojo build -o build.rbxlx
+      - name: Upload built place artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: yug atneo-roblox-place
+          path: build.rbxlx
+          if-no-files-found: error
+          retention-days: 14
+
+  publish:
+    name: Publish place to Roblox
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.publish == true }}
+    needs: build
+    runs-on: ubuntu-latest
+    environment: roblox-production
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+      - name: Install Rojo
+        uses: rojo-rbx/setup-rojo@v1
+      - name: Build Roblox place
+        run: rojo build -o build.rbxlx
+      - name: Publish place version
+        env:
+          ROBLOX_API_KEY: ${{ secrets.ROBLOX_API_KEY }}
+          ROBLOX_UNIVERSE_ID: ${{ secrets.ROBLOX_UNIVERSE_ID }}
+          ROBLOX_PLACE_ID: ${{ secrets.ROBLOX_PLACE_ID }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          : "${ROBLOX_API_KEY:?Missing ROBLOX_API_KEY repository/environment secret}"
+          : "${ROBLOX_UNIVERSE_ID:?Missing ROBLOX_UNIVERSE_ID repository/environment secret}"
+          : "${ROBLOX_PLACE_ID:?Missing ROBLOX_PLACE_ID repository/environment secret}"
+          curl --fail-with-body --silent --show-error --location \
+            --request POST \
+            "https://apis.roblox.com/universes/v1/${ROBLOX_UNIVERSE_ID}/places/${ROBLOX_PLACE_ID}/versions?versionType=Published" \
+            --header "x-api-key: ${ROBLOX_API_KEY}" \
+            --header "Content-Type: application/xml" \
+            --data-binary @build.rbxlx
