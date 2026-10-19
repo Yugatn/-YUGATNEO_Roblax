@@ -27,6 +27,14 @@ A Roblox Studio chess game prototype for the YUGATNEO world. This branch adds a 
 - Select a piece and click a highlighted green square. The server validates legal moves through `ChessEngine`, including check restrictions and special chess moves supported by the engine.
 - This is still a shared-board prototype. Independent table IDs and simultaneous separate matches are not implemented. See [`docs/CHESS_TEST_PLAN.md`](docs/CHESS_TEST_PLAN.md) for the camera, move legality, special-rule, and bot test checklist; these tests have not been run automatically in Roblox Studio.
 
+## Cooperative teams and quiz captain
+
+- Up to three human players can be assigned to each side using **JOIN WHITE TEAM** and **JOIN BLACK TEAM**. The first two players on a fresh server are assigned White and Black automatically; additional players can join a team if it has room.
+- When a side has multiple human teammates, clicking one of that side's pieces starts a short multiple-choice chess/general chess-knowledge quiz for that team. The first teammate to answer correctly becomes the move captain for that selection and chooses the legal destination.
+- The quiz is time-limited to 20 seconds. Each teammate gets one answer attempt per quiz. If no one answers correctly before time runs out, the team can click a friendly piece to try again.
+- The server decides the correct answer, controls quiz state, assigns the move captain, and still validates the chess move through `ChessEngine`.
+- This is an initial prototype: questions are a small fixed set, team membership is limited to three per side, and no persistent team/turn statistics or separate match tables exist. Test with multiple Studio clients before publishing.
+
 ## Run in Roblox Studio
 
 1. Open this repository folder on your Mac.
