@@ -27,9 +27,15 @@ local piecesFolder = Instance.new("Folder")
 piecesFolder.Name = "Pieces"
 piecesFolder.Parent = arena
 
-local controlEvent = Instance.new("RemoteEvent")
-controlEvent.Name = "ChessControlEvent"
-controlEvent.Parent = game:GetService("ReplicatedStorage")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+-- Reuse the event during Rojo hot reloads so the client and server never talk
+-- through two different RemoteEvent instances with the same name.
+local controlEvent = ReplicatedStorage:FindFirstChild("ChessControlEvent")
+if not controlEvent then
+	controlEvent = Instance.new("RemoteEvent")
+	controlEvent.Name = "ChessControlEvent"
+	controlEvent.Parent = ReplicatedStorage
+end
 
 local statusPart = Instance.new("Part")
 statusPart.Name = "GameStatusBoard"
@@ -70,13 +76,15 @@ local pendingPromotion = nil
 local pendingPromotionUserId = nil
 local selectedByUserId = nil
 local gameOver = false
+local matchStarted = false
 local botEnabled = false
 local botThinking = false
 local botMove
 local tryMove
+local handleBoardClick
 
--- This prototype has one shared board. Only the two seated players may move:
--- the first player is White, the second is Black; additional players spectate.
+-- One physical board; players occupy separate fields on opposite sides.
+-- The first player to claim a field is White, the second is Black.
 local playerSides = {}
 local seatPlayers = { White = nil, Black = nil }
 local hostUserId = nil
@@ -134,17 +142,10 @@ local function startTeamQuiz(side, row, col, pieceType)
 end
 
 local function assignPlayer(player)
-	if playerSides[player.UserId] then return end
-	if not seatPlayers.White then
-		seatPlayers.White = player.UserId
-		playerSides[player.UserId] = "White"
-		teamMembers.White[player.UserId] = true
-	elseif not seatPlayers.Black then
-		seatPlayers.Black = player.UserId
-		playerSides[player.UserId] = "Black"
-		teamMembers.Black[player.UserId] = true
+	-- Joining the server does not claim a chess side; the player must enter a side field.
+	if not hostUserId and not seatPlayers.White and not seatPlayers.Black then
+		hostUserId = player.UserId
 	end
-	if not hostUserId then hostUserId = player.UserId end
 	controlEvent:FireClient(player, "SeatAssigned", playerSides[player.UserId] or "Spectator")
 end
 
@@ -160,6 +161,7 @@ Players.PlayerRemoving:Connect(function(player)
 			seatPlayers[side] = next(teamMembers[side])
 		end
 		if seatPlayers[side] == nil then
+			matchStarted = false
 			gameOver = true
 			pendingPromotion = nil
 			pendingPromotionUserId = nil
@@ -355,6 +357,24 @@ local function makePiece(pieceType, side, row, col)
 	badgeCorner.CornerRadius = UDim.new(0.5, 0)
 	badgeCorner.Parent = badgeText
 
+	-- The visible piece is built from multiple Parts. Put a detector on every
+	-- visible part so clicks on heads/crowns/bodies work, not just the base.
+	for _, descendant in ipairs(model:GetDescendants()) do
+		if descendant:IsA("BasePart") then
+			local pieceClick = Instance.new("ClickDetector")
+			pieceClick.Name = "ChessPieceClick"
+			pieceClick.MaxActivationDistance = 128
+			pieceClick.Parent = descendant
+			pieceClick.MouseClick:Connect(function(player)
+				local pieceRow = model:GetAttribute("Row")
+				local pieceCol = model:GetAttribute("Col")
+				if handleBoardClick and pieceRow and pieceCol then
+					handleBoardClick(player, { row = pieceRow, col = pieceCol })
+				end
+			end)
+		end
+	end
+
 	model.Parent = piecesFolder
 	occupancy[key(row, col)] = model
 
@@ -379,6 +399,13 @@ for row = 1, 8 do
 		tile.Parent = boardFolder
 		tile:SetAttribute("Row", row)
 		tile:SetAttribute("Col", col)
+		local tileClick = Instance.new("ClickDetector")
+		tileClick.Name = "ChessSquareClick"
+		tileClick.MaxActivationDistance = 128
+		tileClick.Parent = tile
+		tileClick.MouseClick:Connect(function(player)
+			if handleBoardClick then handleBoardClick(player, { row = row, col = col }) end
+		end)
 		tiles[row][col] = tile
 
 		-- The client sends a square coordinate; server-side rules validate every requested move.
@@ -410,6 +437,7 @@ local function isValidMove(piece, toRow, toCol)
 end
 
 tryMove = function(toRow, toCol, promotionChoice, player)
+	if not matchStarted then return end
 	if gameOver then return end
 	if not player or playerSides[player.UserId] ~= currentTurn then return end
 	if selectedByUserId ~= player.UserId then return end
@@ -498,7 +526,7 @@ tryMove = function(toRow, toCol, promotionChoice, player)
 end
 
 botMove = function()
-	if botThinking or not botEnabled or gameOver or currentTurn ~= "Black" then return end
+	if botThinking or not matchStarted or not botEnabled or gameOver or currentTurn ~= "Black" then return end
 	botThinking = true
 	local candidates = ChessEngine.allLegalMoves(engineState, "Black")
 	if #candidates == 0 then
@@ -546,6 +574,7 @@ local function resetGame()
 	pendingPromotion = nil
 	pendingPromotionUserId = nil
 	gameOver = false
+	matchStarted = seatPlayers.White ~= nil and seatPlayers.Black ~= nil
 	currentTurn = "White"
 	engineState = ChessEngine.newGame()
 	for col = 1, 8 do
@@ -554,11 +583,14 @@ local function resetGame()
 		makePiece(backRank[col], "Black", 8, col)
 		makePiece("Pawn", "Black", 7, col)
 	end
-	setStatus("White to move | New game")
+	if matchStarted then
+		setStatus("Both players ready — White to move")
+	else
+		setStatus("Choose a side: step onto the White or Black field.")
+	end
 end
 
-controlEvent.OnServerEvent:Connect(function(player, action, choice)
-	if action == "BoardClick" then
+handleBoardClick = function(player, choice)
 		if typeof(choice) ~= "table" then return end
 		local now = os.clock()
 		if now - (lastBoardRequestAt[player.UserId] or 0) < 0.04 then return end
@@ -567,6 +599,10 @@ controlEvent.OnServerEvent:Connect(function(player, action, choice)
 		local row, col = tonumber(choice.row), tonumber(choice.col)
 		if not row or not col or row % 1 ~= 0 or col % 1 ~= 0 or not inside(row, col) then
 			controlEvent:FireClient(player, "Status", "Invalid board square. Click a visible square.")
+			return
+		end
+		if not matchStarted then
+			controlEvent:FireClient(player, "Status", "Waiting for the other player to join the opposite field.")
 			return
 		end
 		if gameOver then
@@ -604,15 +640,45 @@ controlEvent.OnServerEvent:Connect(function(player, action, choice)
 		else
 			controlEvent:FireClient(player, "Status", "Select one of your " .. currentTurn .. " pieces first.")
 		end
+end
+
+controlEvent.OnServerEvent:Connect(function(player, action, choice)
+	if action == "BoardClick" then
+		handleBoardClick(player, choice)
+	elseif action == "JoinField" then
+		local side = choice
+		if side == "White" or side == "Black" then
+			-- Also used by the HUD buttons; the physical field prompts call the same helper.
+			if playerSides[player.UserId] then
+				controlEvent:FireClient(player, "Status", "You already joined the " .. playerSides[player.UserId] .. " side.")
+			elseif botEnabled and side == "Black" then
+				controlEvent:FireClient(player, "Status", "Black is controlled by the bot in this practice game.")
+			elseif seatPlayers[side] and seatPlayers[side] ~= player.UserId then
+				controlEvent:FireClient(player, "Status", side .. " field is occupied.")
+			else
+				playerSides[player.UserId] = side
+				teamMembers[side][player.UserId] = true
+				seatPlayers[side] = seatPlayers[side] or player.UserId
+				hostUserId = hostUserId or player.UserId
+				controlEvent:FireClient(player, "SeatAssigned", side)
+				if seatPlayers.White and seatPlayers.Black then
+					botEnabled = false
+					resetGame()
+					setStatus("Both players ready — White to move")
+				else
+					setStatus(side .. " player joined. Waiting for the other side.")
+				end
+			end
+		end
 	elseif action == "JoinTeam" then
 		local side = choice
 		if side ~= "White" and side ~= "Black" then return end
-		if botEnabled and side == "Black" then
-			controlEvent:FireClient(player, "Status", "Black is controlled by the bot in this practice game.")
+		if playerSides[player.UserId] then
+			controlEvent:FireClient(player, "Status", "You already joined the " .. playerSides[player.UserId] .. " side.")
 			return
 		end
-		if playerSides[player.UserId] then
-			controlEvent:FireClient(player, "Status", "You are already on the " .. playerSides[player.UserId] .. " team.")
+		if botEnabled and side == "Black" then
+			controlEvent:FireClient(player, "Status", "Black is controlled by the bot in this practice game.")
 			return
 		end
 		if memberCount(side) >= 3 then
@@ -621,10 +687,18 @@ controlEvent.OnServerEvent:Connect(function(player, action, choice)
 		end
 		playerSides[player.UserId] = side
 		teamMembers[side][player.UserId] = true
-		if not seatPlayers[side] then seatPlayers[side] = player.UserId end
+		seatPlayers[side] = seatPlayers[side] or player.UserId
+		hostUserId = hostUserId or player.UserId
 		controlEvent:FireClient(player, "SeatAssigned", side)
 		for _, teammate in ipairs(sideMembers(side)) do
 			controlEvent:FireClient(teammate, "Status", side .. " team: " .. memberCount(side) .. "/3 players")
+		end
+		if seatPlayers.White and seatPlayers.Black and not matchStarted then
+			botEnabled = false
+			resetGame()
+			setStatus("Both sides ready — White to move")
+		elseif not seatPlayers[side == "White" and "Black" or "White"] then
+			setStatus(side .. " team joined. Waiting for the other side.")
 		end
 	elseif action == "TeamAnswer" then
 		local quiz = pendingTeamQuiz
@@ -650,6 +724,15 @@ controlEvent.OnServerEvent:Connect(function(player, action, choice)
 		end
 	elseif action == "PlayBot" then
 		if playerSides[player.UserId] == "White" or not seatPlayers.White or seatPlayers.White == player.UserId then
+			-- Bot practice owns Black exclusively; any previously seated human is moved to spectator.
+			for userId in pairs(teamMembers.Black) do
+				local formerBlack = Players:GetPlayerByUserId(userId)
+				if formerBlack and userId ~= player.UserId then
+					playerSides[userId] = nil
+					controlEvent:FireClient(formerBlack, "SeatAssigned", "Spectator")
+				end
+			end
+			table.clear(teamMembers.Black)
 			botEnabled = true
 			playerSides[-1] = "Black"
 			seatPlayers.White = player.UserId
@@ -657,6 +740,7 @@ controlEvent.OnServerEvent:Connect(function(player, action, choice)
 			playerSides[player.UserId] = "White"
 			hostUserId = player.UserId
 			resetGame()
+			controlEvent:FireClient(player, "ChessView", { center = Vector3.new(0, 1, 0), side = "White" })
 			controlEvent:FireClient(player, "Status", "Practice vs Bot — you are White. Select a piece, then a green square.")
 		else
 			controlEvent:FireClient(player, "Status", "This shared board is in use. Wait for a seat to open.")
@@ -669,6 +753,10 @@ controlEvent.OnServerEvent:Connect(function(player, action, choice)
 			tryMove(pending.row, pending.col, choice, player)
 		end
 	elseif action == "ClaimDraw" then
+		if not matchStarted then
+			controlEvent:FireClient(player, "Status", "A game starts when both player fields are occupied.")
+			return
+		end
 		if gameOver then return end
 		if playerSides[player.UserId] ~= currentTurn then
 			controlEvent:FireClient(player, "Status", "Only the player whose turn it is can claim a draw.")
@@ -717,8 +805,8 @@ resetGame()
 local floor = Instance.new("Part")
 floor.Name = "ArenaFloor"
 floor.Anchored = true
-floor.Size = Vector3.new(80, 1, 80)
-floor.Position = Vector3.new(0, -0.2, 0)
+floor.Size = Vector3.new(48, 1, 52)
+floor.Position = Vector3.new(0, -0.2, 2)
 floor.Material = Enum.Material.Slate
 floor.Color = Color3.fromRGB(28, 32, 42)
 floor.Parent = arena
@@ -729,45 +817,85 @@ local worldFolder = Instance.new("Folder")
 worldFolder.Name = "World"
 worldFolder.Parent = arena
 
--- Dedicated walk-on pad for a true top-down chess-board view.
--- The pad is adjacent to the board; stepping onto it switches only that player's camera.
-local chessViewPad = Instance.new("Part")
-chessViewPad.Name = "ChessTopDownViewPad"
-chessViewPad.Anchored = true
-chessViewPad.CanCollide = true
-chessViewPad.Size = Vector3.new(10, 0.6, 10)
-chessViewPad.Position = Vector3.new(24, 0.35, 0)
-chessViewPad.Material = Enum.Material.Neon
-chessViewPad.Color = Color3.fromRGB(64, 170, 125)
-chessViewPad.Parent = worldFolder
+-- Two player fields flank the same board. Entering a field claims that side.
+local function makePlayerField(name, side, position, color)
+	local field = Instance.new("Part")
+	field.Name = name
+	field.Anchored = true
+	field.CanCollide = true
+	field.Size = Vector3.new(10, 0.6, 7)
+	field.Position = position
+	field.Material = Enum.Material.Neon
+	field.Color = color
+	field:SetAttribute("BoardSide", side)
+	field.Parent = worldFolder
+	local sign = Instance.new("BillboardGui")
+	sign.Name = "PlayerFieldSign"
+	sign.Size = UDim2.fromOffset(190, 52)
+	sign.StudsOffset = Vector3.new(0, 3.5, 0)
+	sign.AlwaysOnTop = true
+	sign.Parent = field
+	local label = Instance.new("TextLabel")
+	label.Size = UDim2.fromScale(1, 1)
+	label.BackgroundColor3 = Color3.fromRGB(17, 22, 32)
+	label.BackgroundTransparency = 0.08
+	label.TextColor3 = Color3.fromRGB(245, 245, 245)
+	label.Font = Enum.Font.GothamBold
+	label.TextScaled = true
+	label.Text = side .. " PLAYER FIELD"
+	label.Parent = sign
+	local corner = Instance.new("UICorner")
+	corner.CornerRadius = UDim.new(0, 10)
+	corner.Parent = label
+	return field
+end
+local whiteField = makePlayerField("WhitePlayerField", "White", Vector3.new(0, 0.35, -24), Color3.fromRGB(64, 170, 125))
+local blackField = makePlayerField("BlackPlayerField", "Black", Vector3.new(0, 0.35, 24), Color3.fromRGB(70, 125, 190))
 
-local chessViewSign = Instance.new("BillboardGui")
-chessViewSign.Name = "ChessViewSign"
-chessViewSign.Size = UDim2.fromOffset(220, 54)
-chessViewSign.StudsOffset = Vector3.new(0, 3.5, 0)
-chessViewSign.AlwaysOnTop = true
-chessViewSign.Parent = chessViewPad
-local chessViewText = Instance.new("TextLabel")
-chessViewText.Size = UDim2.fromScale(1, 1)
-chessViewText.BackgroundColor3 = Color3.fromRGB(17, 22, 32)
-chessViewText.BackgroundTransparency = 0.1
-chessViewText.TextColor3 = Color3.fromRGB(245, 245, 245)
-chessViewText.Font = Enum.Font.GothamBold
-chessViewText.TextScaled = true
-chessViewText.Text = "STEP HERE • CHESS VIEW"
-chessViewText.Parent = chessViewSign
-local signCorner = Instance.new("UICorner")
-signCorner.CornerRadius = UDim.new(0, 10)
-signCorner.Parent = chessViewText
-
+local function claimSide(player, side)
+	if side ~= "White" and side ~= "Black" then return end
+	if playerSides[player.UserId] then
+		controlEvent:FireClient(player, "Status", "You already joined the " .. playerSides[player.UserId] .. " side.")
+		return
+	end
+	if botEnabled and side == "Black" then
+		controlEvent:FireClient(player, "Status", "Black is controlled by the bot in this practice game.")
+		return
+	end
+	if seatPlayers[side] and seatPlayers[side] ~= player.UserId then
+		controlEvent:FireClient(player, "Status", side .. " field is occupied. Choose the other side.")
+		return
+	end
+	playerSides[player.UserId] = side
+	teamMembers[side][player.UserId] = true
+	seatPlayers[side] = seatPlayers[side] or player.UserId
+	hostUserId = hostUserId or player.UserId
+	controlEvent:FireClient(player, "SeatAssigned", side)
+	if seatPlayers.White and seatPlayers.Black then
+		botEnabled = false
+		resetGame()
+		setStatus("Both players ready — White to move")
+	else
+		setStatus(side .. " player joined. Waiting for the other side.")
+	end
+end
 local viewCooldown = {}
-chessViewPad.Touched:Connect(function(hit)
-	local character = hit and hit:FindFirstAncestorOfClass("Model")
-	local player = character and Players:GetPlayerFromCharacter(character)
-	if not player or viewCooldown[player.UserId] then return end
-	viewCooldown[player.UserId] = true
-	controlEvent:FireClient(player, "ChessView", Vector3.new(0, 1, 0))
-	task.delay(2, function()
-		viewCooldown[player.UserId] = nil
+local function connectViewField(field, side)
+	field.Touched:Connect(function(hit)
+		local character = hit and hit:FindFirstAncestorOfClass("Model")
+		local player = character and Players:GetPlayerFromCharacter(character)
+		if not player or viewCooldown[player.UserId] then return end
+		viewCooldown[player.UserId] = true
+		if not playerSides[player.UserId] then
+			claimSide(player, side)
+		elseif playerSides[player.UserId] ~= side then
+			controlEvent:FireClient(player, "Status", "You are on the " .. playerSides[player.UserId] .. " side. Use EXIT to leave this view.")
+			task.delay(2, function() viewCooldown[player.UserId] = nil end)
+			return
+		end
+		controlEvent:FireClient(player, "ChessView", { center = Vector3.new(0, 1, 0), side = side })
+		task.delay(2, function() viewCooldown[player.UserId] = nil end)
 	end)
-end)
+end
+connectViewField(whiteField, "White")
+connectViewField(blackField, "Black")

@@ -1,35 +1,36 @@
 # YUGATNEO Roblox — Chess Arena
 
-A Roblox Studio chess game prototype for the YUGATNEO world. This branch adds a top-down board-view camera to the server-side chess rules engine and in-game HUD. Changes still require live verification in Roblox Studio.
+A Roblox Studio chess game prototype for the YUGATNEO world. This branch uses one shared chessboard and two separate player fields on opposite sides. Stepping onto a field claims White or Black automatically. It also includes robust mouse-to-square mapping and automatic overhead view for bot practice. Changes still require live verification in Roblox Studio.
 
 ## Included in this development branch
 
-- Generated 8×8 board and 32 starting pieces.
+- One generated 8×8 chessboard with 32 starting pieces, plus two player fields on opposite sides.
 - Distinct 3D piece silhouettes and readable piece badges.
 - Click a piece to highlight legal destination squares, then click a destination to move.
 - Server-authoritative legal move validation.
 - Turn order, captures, king-safety checks, check, checkmate, and stalemate.
 - Castling, en passant, and pawn promotion with a queen, rook, bishop, or knight choice dialog.
 - Modern dark HUD with gold accents, live status, move hints, rules panel, cancel selection, and host-only new-game control.
-- Basic server-side seating for the current shared board: first player is White, second player is Black, additional players spectate.
+- One server-authoritative match on one board. Players claim White/Black by stepping onto the matching field; the match remains locked until both sides are occupied. Other players can spectate or join a team.
 - Move requests are restricted to the seated player whose side is on move; promotion choice is accepted only from the player who initiated that promotion.
 
 ## Important implementation notes
 
-- The current server still creates one shared board for everyone in the server; independent tables and matchmaking are not implemented yet.
-- Seating is a security baseline, not a full lobby: seats are not yet re-queued automatically when a player leaves, and the host is the first player who joined the current server.
+- There is only one physical board and one match. The two fields are player join points, not additional boards. Independent table IDs and matchmaking are not implemented yet.
+- Joining the server does not automatically claim a side. Board input is blocked until both White and Black fields are occupied. If a side becomes empty, the match is stopped; automatic queueing and reconnect support are not implemented.
+- The server reuses the existing `ChessControlEvent` during script reloads to avoid creating separate client/server event instances. HUD team buttons can add teammates to an occupied side up to the three-player limit; entering the physical fields claims only an unoccupied side.
 - The rules engine is a first implementation and still needs scenario-based testing in Roblox Studio before it can be treated as tournament-ready.
-- Draw handling for threefold repetition, the fifty-move rule, and insufficient material is not implemented yet.
+- Draw handling is present in the current engine branch but still requires runtime regression testing.
 - Automated tests and live Roblox Studio verification are still required before treating the rules engine as tournament-ready.
 
 ## Top-down chess interaction
-- A green walk-on pad is placed beside the chessboard. Stepping onto it switches the local camera to a stable oblique overhead view, calculated from the board center and viewport. Use the on-screen **EXIT** control to restore the previous camera state.
+- A green White player field and blue Black player field sit on opposite sides of the same board. White is on the board's row-1 side; Black is on the row-8 side. Step onto either field to claim that side; entering a field also switches the local camera to an overhead-oblique view from that side. The board rejects moves until both fields are occupied. Pressing **PLAY VS BOT** also opens White's board view automatically. Use **EXIT** to restore the previous camera state.
 - Select a piece and click a highlighted green square. The server validates legal moves through `ChessEngine`, including check restrictions and special chess moves supported by the engine.
-- This is still a shared-board prototype. Independent table IDs and simultaneous separate matches are not implemented. See [`docs/CHESS_TEST_PLAN.md`](docs/CHESS_TEST_PLAN.md) for the camera, move legality, special-rule, and bot test checklist; these tests have not been run automatically in Roblox Studio.
+- Both players use the same board and match state. Independent table IDs and simultaneous separate matches are not implemented. See [`docs/CHESS_TEST_PLAN.md`](docs/CHESS_TEST_PLAN.md) for the camera, move legality, special-rule, and bot test checklist; these tests have not been run automatically in Roblox Studio.
 
 ## Cooperative teams and quiz captain
 
-- Up to three human players can be assigned to each side using **JOIN WHITE TEAM** and **JOIN BLACK TEAM**. The first two players on a fresh server are assigned White and Black automatically; additional players can join a team if it has room.
+- The primary White and Black players join by stepping onto their respective fields. Up to three human players can be assigned to each side using the **JOIN WHITE TEAM** and **JOIN BLACK TEAM** controls. Team membership and the quiz captain flow require multi-client verification.
 - When a side has multiple human teammates, clicking one of that side's pieces starts a short multiple-choice chess/general chess-knowledge quiz for that team. The first teammate to answer correctly becomes the move captain for that selection and chooses the legal destination.
 - The quiz is time-limited to 20 seconds. Each teammate gets one answer attempt per quiz. If no one answers correctly before time runs out, the team can click a friendly piece to try again.
 - The server decides the correct answer, controls quiz state, assigns the move captain, and still validates the chess move through `ChessEngine`.
@@ -38,13 +39,13 @@ A Roblox Studio chess game prototype for the YUGATNEO world. This branch adds a 
 ## Focused chess arena
 
 - Removed the four watchtowers, perimeter fence and decorative rails, telescopes, target range, reaction-time pad, memory challenge, computer desk, phone booth, and character sunglasses/beard styling. These features were unrelated to chess and made the play area visually crowded.
-- The environment now consists of the chessboard and pieces, the status panel, a compact floor, and the green walk-on pad used to enter the overhead chess view.
+- The environment now consists of one chessboard, its pieces, a status panel, a compact floor, and separate White/Black player fields on opposite sides.
 - The camera overlay is now chess-only; telescope camera actions and labels were removed.
-- The floor was reduced to 80×80 studs so the arena reads as a compact chess area rather than a large courtyard.
+- The floor is a compact 48×52-stud area sized for one board and two opposing player fields.
 
 ## Input reliability and engine checks
 
-- Board input uses `UserInputService` plus a camera raycast filtered to the chess arena, then sends only row/column coordinates to the server. This avoids relying on overlapping `ClickDetector` instances and ignores characters and unrelated scenery.
+- Board selection uses server-created `ClickDetector`s on all 64 squares and every visible part of each piece. This avoids depending on custom screen-ray coordinate calculations; both the piece and empty destination square send the same validated square coordinate into the server move handler. This avoids depending on which tall piece part a raycast hits and sends only row/column coordinates to the server.
 - The server rate-limits board-click requests and returns player-specific feedback for invalid squares, ended games, pending promotion, and the wrong side to move. The server remains authoritative for turn ownership and legal moves.
 - The engine resets the half-move counter on pawn promotion as required by the 50-move-rule counter semantics.
 - A manual engine smoke-test harness is available at [`tests/ChessEngineSmokeTest.lua`](tests/ChessEngineSmokeTest.lua). Copy it into a temporary Script under `ServerScriptService` and run Play; it checks standard starting-position perft counts at depths 1–3 (20, 400, 8902). Remove the temporary Script after testing.
@@ -69,11 +70,11 @@ If Rojo is already running on port 34872, do not launch a second server. Use the
 
 ## GitHub and branches
 
-This work is isolated on `feature/reliable-chess-input-world-props`; `main` remains unchanged while the changes are reviewed. To test this branch locally:
+This work is isolated on `feature/two-board-playable-chess`; `main` remains unchanged while the changes are reviewed. To test this branch locally:
 
 ```bash
 git fetch origin
-git switch feature/reliable-chess-input-world-props
+git switch feature/two-board-playable-chess
 git pull
 ```
 

@@ -81,7 +81,7 @@ local subtitle = Instance.new("TextLabel")
 subtitle.Position = UDim2.new(0, 17, 0, 32)
 subtitle.Size = UDim2.new(1, -34, 0, 16)
 subtitle.BackgroundTransparency = 1
-subtitle.Text = "CLASSIC CHESS • TWO SIDES • ONE BOARD"
+subtitle.Text = "CLASSIC CHESS • ONE BOARD • TWO PLAYER FIELDS"
 subtitle.TextColor3 = COLORS.muted
 subtitle.Font = Enum.Font.GothamMedium
 subtitle.TextSize = 9
@@ -148,7 +148,7 @@ tip.Name = "Tip"
 tip.Position = UDim2.new(0, 14, 0, 176)
 tip.Size = UDim2.new(1, -28, 0, 42)
 tip.BackgroundTransparency = 1
-tip.Text = "1) Click PLAY VS BOT.  2) Select a piece.\n3) Click a green square to move."
+tip.Text = "1) Stand on White or Black field.\n2) Select a piece, then a green square."
 tip.TextColor3 = COLORS.muted
 tip.Font = Enum.Font.Gotham
 tip.TextSize = 11
@@ -183,7 +183,7 @@ local helpText = Instance.new("TextLabel")
 helpText.Position = UDim2.new(0, 14, 0, 44)
 helpText.Size = UDim2.new(1, -28, 1, -92)
 helpText.BackgroundTransparency = 1
-helpText.Text = "HOW TO START\n1. Press PLAY VS BOT. You play White.\n2. Click one of your light pieces.\n3. Green squares are legal moves. Click one.\n4. The bot replies as Black.\n\nPAWN: forward, captures diagonally.\nROOK: straight lines. BISHOP: diagonals.\nQUEEN: straight + diagonal. KNIGHT: L-shape.\nKING: one square; keep it safe.\n\nGoal: checkmate the enemy king."
+helpText.Text = "HOW TO START\n1. Stand on the White or Black field to join.\n2. Or press PLAY VS BOT to practise as White.\n3. Click one of your pieces.\n4. Green squares are legal moves. Click one.\n4. The bot replies as Black.\n\nPAWN: forward, captures diagonally.\nROOK: straight lines. BISHOP: diagonals.\nQUEEN: straight + diagonal. KNIGHT: L-shape.\nKING: one square; keep it safe.\n\nGoal: checkmate the enemy king."
 helpText.TextColor3 = COLORS.text
 helpText.Font = Enum.Font.Gotham
 helpText.TextSize = 12
@@ -213,10 +213,10 @@ botButton.Activated:Connect(function()
 	controlEvent:FireServer("PlayBot")
 end)
 joinWhiteButton.Activated:Connect(function()
-	controlEvent:FireServer("JoinTeam", "White")
+	controlEvent:FireServer("JoinField", "White")
 end)
 joinBlackButton.Activated:Connect(function()
-	controlEvent:FireServer("JoinTeam", "Black")
+	controlEvent:FireServer("JoinField", "Black")
 end)
 claimDrawButton.Activated:Connect(function()
 	controlEvent:FireServer("ClaimDraw")
@@ -439,13 +439,14 @@ controlEvent.OnClientEvent:Connect(function(action, payload, fromRow, fromCol)
 				previousCameraFOV = camera.FieldOfView
 			end
 			camera.CameraType = Enum.CameraType.Scriptable
-			chessViewLabel.Text = "CHESS BOARD • BOARD VIEW"
-			local target = typeof(payload) == "Vector3" and payload or Vector3.new(0, 1, 0)
+			local side = typeof(payload) == "table" and payload.side or "White"
+			local target = typeof(payload) == "table" and payload.center or (typeof(payload) == "Vector3" and payload or Vector3.new(0, 1, 0))
+			chessViewLabel.Text = side .. " • CHESS BOARD VIEW"
 			local boardSpan = 36
 			local verticalFov = math.rad(55)
 			local requiredDistance = (boardSpan / 2) / math.tan(verticalFov / 2)
 			local height = math.max(34, requiredDistance * 0.78)
-			local depth = math.max(18, height * 0.48)
+			local depth = math.max(18, height * 0.48) * (side == "White" and -1 or 1)
 			activeChessCameraCFrame = CFrame.lookAt(target + Vector3.new(0, height, depth), target)
 			camera.FieldOfView = 55
 			RunService:UnbindFromRenderStep(CAMERA_BIND_NAME)
@@ -464,7 +465,7 @@ controlEvent.OnClientEvent:Connect(function(action, payload, fromRow, fromCol)
 		if assigned == "White" or assigned == "Black" then
 			statusLabel.Text = "You are " .. assigned .. " — waiting for both players"
 		else
-			statusLabel.Text = "Spectator — both seats are occupied"
+			statusLabel.Text = "Choose White or Black field to join, or press PLAY VS BOT."
 		end
 	elseif action == "PromotionRequired" then
 		promotionPanel.Visible = true
@@ -486,71 +487,31 @@ controlEvent.OnClientEvent:Connect(function(action, payload, fromRow, fromCol)
 	elseif action == "LegalMoves" then
 		restoreHighlights()
 		local arena = workspace:FindFirstChild("YUGATNEO_ChessArena")
-		local board = arena and arena:FindFirstChild("Board")
-		if not board then return end
-		if fromRow and fromCol then
-			local origin = board:FindFirstChild("Square_" .. fromRow .. "_" .. fromCol)
-			if origin then
-				highlighted[origin] = getTileColor(fromRow, fromCol)
-				origin.Color = COLORS.gold
-			end
+		local boards = {}
+		if arena then
+			local whiteBoard = arena:FindFirstChild("Board")
+			if whiteBoard then table.insert(boards, whiteBoard) end
 		end
-		for _, move in ipairs(payload or {}) do
-			local tile = board:FindFirstChild("Square_" .. move.row .. "_" .. move.col)
-			if tile then
-				highlighted[tile] = getTileColor(move.row, move.col)
-				tile.Color = COLORS.green
+		if #boards == 0 then return end
+		for _, board in ipairs(boards) do
+			if fromRow and fromCol then
+				local origin = board:FindFirstChild("Square_" .. fromRow .. "_" .. fromCol)
+				if origin then
+					highlighted[origin] = getTileColor(fromRow, fromCol)
+					origin.Color = COLORS.gold
+				end
+			end
+			for _, move in ipairs(payload or {}) do
+				local tile = board:FindFirstChild("Square_" .. move.row .. "_" .. move.col)
+				if tile then
+					highlighted[tile] = getTileColor(move.row, move.col)
+					tile.Color = COLORS.green
+				end
 			end
 		end
 	end
 end)
 
 
--- Reliable board input: raycast only against the chess arena.
--- Using Mouse.Target can select the avatar or unrelated scenery and can be inconsistent
--- while Scriptable camera mode is active. An Include filter makes the intended target explicit.
-local lastBoardClick = 0
-local clickSequence = 0
-UserInputService.InputBegan:Connect(function(input, gameProcessed)
-	if input.UserInputType ~= Enum.UserInputType.MouseButton1 then return end
-	if gameProcessed then return end
-
-	local arena = workspace:FindFirstChild("YUGATNEO_ChessArena")
-	local cameraNow = workspace.CurrentCamera
-	if not arena or not cameraNow then return end
-
-	local mouseLocation = UserInputService:GetMouseLocation()
-	local unitRay = cameraNow:ScreenPointToRay(mouseLocation.X, mouseLocation.Y)
-	local rayParams = RaycastParams.new()
-	rayParams.FilterType = Enum.RaycastFilterType.Include
-	rayParams.FilterDescendantsInstances = { arena }
-	rayParams.IgnoreWater = true
-	local hit = workspace:Raycast(unitRay.Origin, unitRay.Direction * 1000, rayParams)
-	if not hit or not hit.Instance then return end
-
-	local target = hit.Instance
-	local row, col
-	local current = target
-	while current and current ~= arena do
-		local r = current:GetAttribute("Row")
-		local c = current:GetAttribute("Col")
-		if r ~= nil and c ~= nil then
-			row, col = r, c
-			break
-		end
-		current = current.Parent
-	end
-	if not row or not col then return end
-
-	local board = arena:FindFirstChild("Board")
-	local pieces = arena:FindFirstChild("Pieces")
-	if not (board and (target:IsDescendantOf(board) or (pieces and target:IsDescendantOf(pieces)))) then
-		return
-	end
-
-	local now = os.clock()
-	if now - lastBoardClick < 0.08 then return end
-	lastBoardClick = now
-	clickSequence += 1
-	controlEvent:FireServer("BoardClick", { row = row, col = col, sequence = clickSequence })
-end)
+-- Chess selection is handled by server-created ClickDetectors on each square
+-- and piece base. This avoids fragile screen-ray to board-coordinate mapping.
