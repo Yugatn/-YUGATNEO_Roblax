@@ -593,6 +593,10 @@ controlEvent.OnServerEvent:Connect(function(player, action, choice)
 	if action == "JoinTeam" then
 		local side = choice
 		if side ~= "White" and side ~= "Black" then return end
+		if botEnabled and side == "Black" then
+			controlEvent:FireClient(player, "Status", "Black is controlled by the bot in this practice game.")
+			return
+		end
 		if playerSides[player.UserId] then
 			controlEvent:FireClient(player, "Status", "You are already on the " .. playerSides[player.UserId] .. " team.")
 			return
