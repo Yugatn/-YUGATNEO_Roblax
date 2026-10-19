@@ -35,6 +35,14 @@ A Roblox Studio chess game prototype for the YUGATNEO world. This branch adds a 
 - The server decides the correct answer, controls quiz state, assigns the move captain, and still validates the chess move through `ChessEngine`.
 - This is an initial prototype: questions are a small fixed set, team membership is limited to three per side, and no persistent team/turn statistics or separate match tables exist. Test with multiple Studio clients before publishing.
 
+## Reliable board input and world props
+
+- Piece and square selection now uses a client mouse raycast and sends only the target row/column through `ChessControlEvent`; the server checks side-to-move, player assignment, selection ownership, and legal moves in `ChessEngine`.
+- Removed overlapping `ClickDetector` listeners from the chessboard and piece decorations to avoid input priority and character-distance issues. The client raycast is only an input mechanism, not an authority for legal moves.
+- Added a study desk with a computer terminal and an interactive public telephone booth beside the board.
+- The computer and phone prompts currently show informational status messages; they are visual world props, not yet connected to a real browser, telephony, or navigation system.
+- Reference used: Roblox Creator Hub documentation for [ClickDetector](https://create.roblox.com/docs/reference/engine/classes/ClickDetector) and [RemoteEvents](https://create.roblox.com/docs/scripting/events/remote). This implementation uses original project code rather than copying a third-party chess engine with unclear or restrictive licensing.
+
 ## Run in Roblox Studio
 
 1. Open this repository folder on your Mac.
@@ -47,11 +55,11 @@ If Rojo is already running on port 34872, do not launch a second server. Use the
 
 ## GitHub and branches
 
-This work is isolated on `feature/chess-topdown-interaction`; `main` remains unchanged while the changes are reviewed. To test this branch locally:
+This work is isolated on `feature/reliable-chess-input-world-props`; `main` remains unchanged while the changes are reviewed. To test this branch locally:
 
 ```bash
 git fetch origin
-git switch feature/team-chess-quiz-captain
+git switch feature/reliable-chess-input-world-props
 git pull
 ```
 
