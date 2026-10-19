@@ -66,6 +66,7 @@ local currentTurn = "White"
 local engineState = ChessEngine.newGame()
 local selectedPiece = nil
 local selectedTile = nil
+local pendingPromotion = nil
 local tryMove
 
 local WHITE = Color3.fromRGB(238, 232, 218)
@@ -334,7 +335,8 @@ local function isValidMove(piece, toRow, toCol)
 	return false
 end
 
-tryMove = function(toRow, toCol)
+tryMove = function(toRow, toCol, promotionChoice)
+	if pendingPromotion and not promotionChoice then return end
 	if not selectedPiece or not selectedPiece.Parent then
 		selectedPiece = nil
 		return
@@ -348,9 +350,13 @@ tryMove = function(toRow, toCol)
 	local fromRow, fromCol = piece:GetAttribute("Row"), piece:GetAttribute("Col")
 	local side = piece:GetAttribute("Side")
 	local pieceType = piece:GetAttribute("PieceType")
-	-- The first implementation promotes automatically to a queen. The client UI will
-	-- expose the promotion choice in a subsequent UI pass.
-	local success, result, captured, move = ChessEngine.move(engineState, fromRow, fromCol, toRow, toCol, "Queen")
+	if pieceType == "Pawn" and (toRow == 1 or toRow == 8) and not promotionChoice then
+		pendingPromotion = { row = toRow, col = toCol }
+		controlEvent:FireAllClients("PromotionRequired")
+		setStatus("Choose a piece for pawn promotion")
+		return
+	end
+	local success, result, captured, move = ChessEngine.move(engineState, fromRow, fromCol, toRow, toCol, promotionChoice or "Queen")
 	if not success then
 		setStatus(currentTurn .. " to move | " .. tostring(result))
 		return
@@ -391,6 +397,7 @@ tryMove = function(toRow, toCol)
 	end
 
 	selectedPiece = nil
+	pendingPromotion = nil
 	controlEvent:FireAllClients("ClearHighlights")
 	currentTurn = engineState.turn
 	local status = ChessEngine.status(engineState)
@@ -403,6 +410,7 @@ local function resetGame()
 	piecesFolder:ClearAllChildren()
 	table.clear(occupancy)
 	selectedPiece = nil
+	pendingPromotion = nil
 	currentTurn = "White"
 	engineState = ChessEngine.newGame()
 	for col = 1, 8 do
@@ -414,11 +422,19 @@ local function resetGame()
 	setStatus("White to move | New game")
 end
 
-controlEvent.OnServerEvent:Connect(function(player, action)
-	if action == "Reset" then
+controlEvent.OnServerEvent:Connect(function(player, action, choice)
+	if action == "Promote" then
+		if pendingPromotion and selectedPiece then
+			local pending = pendingPromotion
+			pendingPromotion = nil
+			tryMove(pending.row, pending.col, choice)
+		end
+	elseif action == "Reset" then
 		resetGame()
 	elseif action == "Deselect" then
 		selectedPiece = nil
+		pendingPromotion = nil
+		controlEvent:FireAllClients("PromotionHide")
 		controlEvent:FireAllClients("ClearHighlights")
 		setStatus(currentTurn .. " to move")
 	end
