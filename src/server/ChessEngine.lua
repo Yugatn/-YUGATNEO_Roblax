@@ -1,7 +1,7 @@
--- YUGATNEO Chess Engine
--- Pure Luau rules engine. Board rows 1..8 run White's home rank to Black's home rank.
--- Board[row][col] is nil or { type = "Pawn" | "Rook" | "Knight" | "Bishop" | "Queen" | "King", side = "White" | "Black", moved = boolean }.
--- This module owns rules only; rendering and player interaction belong to ChessArena.server.lua.
+-- YUGATNEO Chess Engine — pure Luau rules (no Roblox Instances).
+-- Board rows 1..8: White home rank → Black home rank.
+-- Includes castling, en passant, promotion, check/mate/stalemate,
+-- claimable threefold/fifty-move, automatic fivefold/75-move, insufficient material.
 
 local ChessEngine = {}
 
@@ -24,14 +24,18 @@ local function positionKey(state)
 			local piece = state.board[row][col]
 			if piece then
 				local code = codes[piece.type] or "?"
-				if piece.side == "White" then code = string.upper(code) end
+				if piece.side == "White" then
+					code = string.upper(code)
+				end
 				table.insert(parts, code .. tostring(row) .. tostring(col))
 			end
 		end
 	end
 	local rights = state.castling
-	local castlingKey = (rights.White.kingSide and "K" or "") .. (rights.White.queenSide and "Q" or "")
-		.. (rights.Black.kingSide and "k" or "") .. (rights.Black.queenSide and "q" or "")
+	local castlingKey = (rights.White.kingSide and "K" or "")
+		.. (rights.White.queenSide and "Q" or "")
+		.. (rights.Black.kingSide and "k" or "")
+		.. (rights.Black.queenSide and "q" or "")
 	local ep = state.enPassant and (tostring(state.enPassant.row) .. tostring(state.enPassant.col)) or "-"
 	return table.concat(parts, ",") .. "|" .. state.turn .. "|" .. castlingKey .. "|" .. ep
 end
@@ -65,7 +69,9 @@ end
 local function addMove(moves, row, col, extra)
 	local move = { row = row, col = col }
 	if extra then
-		for k, v in pairs(extra) do move[k] = v end
+		for k, v in pairs(extra) do
+			move[k] = v
+		end
 	end
 	table.insert(moves, move)
 end
@@ -78,7 +84,9 @@ local function rayMoves(state, row, col, piece, directions, moves)
 			if not target then
 				addMove(moves, r, c)
 			else
-				if target.side ~= piece.side and target.type ~= "King" then addMove(moves, r, c) end
+				if target.side ~= piece.side and target.type ~= "King" then
+					addMove(moves, r, c)
+				end
 				break
 			end
 			r += direction[1]
@@ -99,7 +107,9 @@ function ChessEngine.newGame()
 		halfMove = 0,
 		fullMove = 1,
 	}
-	for row = 1, 8 do state.board[row] = {} end
+	for row = 1, 8 do
+		state.board[row] = {}
+	end
 	local back = { "Rook", "Knight", "Bishop", "Queen", "King", "Bishop", "Knight", "Rook" }
 	for col = 1, 8 do
 		state.board[1][col] = { type = back[col], side = "White", moved = false }
@@ -115,7 +125,9 @@ function ChessEngine.findKing(state, side)
 	for row = 1, 8 do
 		for col = 1, 8 do
 			local p = state.board[row][col]
-			if p and p.side == side and p.type == "King" then return row, col end
+			if p and p.side == side and p.type == "King" then
+				return row, col
+			end
 		end
 	end
 	return nil, nil
@@ -128,15 +140,19 @@ function ChessEngine.isSquareAttacked(state, row, col, bySide)
 		local c = col + dc
 		if inside(pawnRow, c) then
 			local p = state.board[pawnRow][c]
-			if p and p.side == bySide and p.type == "Pawn" then return true end
+			if p and p.side == bySide and p.type == "Pawn" then
+				return true
+			end
 		end
 	end
 
-	for _, delta in ipairs({ {2,1},{2,-1},{-2,1},{-2,-1},{1,2},{1,-2},{-1,2},{-1,-2} }) do
+	for _, delta in ipairs({ { 2, 1 }, { 2, -1 }, { -2, 1 }, { -2, -1 }, { 1, 2 }, { 1, -2 }, { -1, 2 }, { -1, -2 } }) do
 		local r, c = row + delta[1], col + delta[2]
 		if inside(r, c) then
 			local p = state.board[r][c]
-			if p and p.side == bySide and p.type == "Knight" then return true end
+			if p and p.side == bySide and p.type == "Knight" then
+				return true
+			end
 		end
 	end
 
@@ -146,43 +162,62 @@ function ChessEngine.isSquareAttacked(state, row, col, bySide)
 				local r, c = row + dr, col + dc
 				if inside(r, c) then
 					local p = state.board[r][c]
-					if p and p.side == bySide and p.type == "King" then return true end
+					if p and p.side == bySide and p.type == "King" then
+						return true
+					end
 				end
 			end
 		end
 	end
 
-	local lines = {
-		{ {1,0},{-1,0},{0,1},{0,-1}, "Rook" },
-		{ {1,1},{1,-1},{-1,1},{-1,-1}, "Bishop" },
-	}
-	for _, line in ipairs(lines) do
-		for _, direction in ipairs(line[1]) do
-			local r, c = row + direction[1], col + direction[2]
-			while inside(r, c) do
-				local p = state.board[r][c]
-				if p then
-					if p.side == bySide and (p.type == line[5] or p.type == "Queen") then return true end
-					break
+	-- FIXED: iterate real direction lists (previous code used line[1] only)
+	for _, direction in ipairs({ { 1, 0 }, { -1, 0 }, { 0, 1 }, { 0, -1 } }) do
+		local r, c = row + direction[1], col + direction[2]
+		while inside(r, c) do
+			local p = state.board[r][c]
+			if p then
+				if p.side == bySide and (p.type == "Rook" or p.type == "Queen") then
+					return true
 				end
-				r += direction[1]
-				c += direction[2]
+				break
 			end
+			r += direction[1]
+			c += direction[2]
 		end
 	end
+
+	for _, direction in ipairs({ { 1, 1 }, { 1, -1 }, { -1, 1 }, { -1, -1 } }) do
+		local r, c = row + direction[1], col + direction[2]
+		while inside(r, c) do
+			local p = state.board[r][c]
+			if p then
+				if p.side == bySide and (p.type == "Bishop" or p.type == "Queen") then
+					return true
+				end
+				break
+			end
+			r += direction[1]
+			c += direction[2]
+		end
+	end
+
 	return false
 end
 
 function ChessEngine.inCheck(state, side)
 	local row, col = ChessEngine.findKing(state, side)
-	if not row then return true end
+	if not row then
+		return true
+	end
 	return ChessEngine.isSquareAttacked(state, row, col, other(side))
 end
 
 local function pseudoMoves(state, row, col)
 	local piece = state.board[row][col]
 	local moves = {}
-	if not piece then return moves end
+	if not piece then
+		return moves
+	end
 	local side = piece.side
 	local forward = side == "White" and 1 or -1
 
@@ -200,26 +235,33 @@ local function pseudoMoves(state, row, col)
 			local r, c = row + forward, col + dc
 			if inside(r, c) then
 				local target = state.board[r][c]
-				if target and target.side ~= side and target.type ~= "King" then addMove(moves, r, c) end
+				if target and target.side ~= side and target.type ~= "King" then
+					addMove(moves, r, c)
+				end
 				if state.enPassant and state.enPassant.row == r and state.enPassant.col == c then
 					addMove(moves, r, c, { enPassant = true })
 				end
 			end
 		end
 	elseif piece.type == "Knight" then
-		for _, d in ipairs({ {2,1},{2,-1},{-2,1},{-2,-1},{1,2},{1,-2},{-1,2},{-1,-2} }) do
+		for _, d in ipairs({ { 2, 1 }, { 2, -1 }, { -2, 1 }, { -2, -1 }, { 1, 2 }, { 1, -2 }, { -1, 2 }, { -1, -2 } }) do
 			local r, c = row + d[1], col + d[2]
 			if inside(r, c) then
 				local target = state.board[r][c]
-				if not target or (target.side ~= side and target.type ~= "King") then addMove(moves, r, c) end
+				if not target or (target.side ~= side and target.type ~= "King") then
+					addMove(moves, r, c)
+				end
 			end
 		end
 	elseif piece.type == "Bishop" then
-		rayMoves(state, row, col, piece, { {1,1},{1,-1},{-1,1},{-1,-1} }, moves)
+		rayMoves(state, row, col, piece, { { 1, 1 }, { 1, -1 }, { -1, 1 }, { -1, -1 } }, moves)
 	elseif piece.type == "Rook" then
-		rayMoves(state, row, col, piece, { {1,0},{-1,0},{0,1},{0,-1} }, moves)
+		rayMoves(state, row, col, piece, { { 1, 0 }, { -1, 0 }, { 0, 1 }, { 0, -1 } }, moves)
 	elseif piece.type == "Queen" then
-		rayMoves(state, row, col, piece, { {1,1},{1,-1},{-1,1},{-1,-1},{1,0},{-1,0},{0,1},{0,-1} }, moves)
+		rayMoves(state, row, col, piece, {
+			{ 1, 1 }, { 1, -1 }, { -1, 1 }, { -1, -1 },
+			{ 1, 0 }, { -1, 0 }, { 0, 1 }, { 0, -1 },
+		}, moves)
 	elseif piece.type == "King" then
 		for dr = -1, 1 do
 			for dc = -1, 1 do
@@ -227,7 +269,9 @@ local function pseudoMoves(state, row, col)
 					local r, c = row + dr, col + dc
 					if inside(r, c) then
 						local target = state.board[r][c]
-						if not target or (target.side ~= side and target.type ~= "King") then addMove(moves, r, c) end
+						if not target or (target.side ~= side and target.type ~= "King") then
+							addMove(moves, r, c)
+						end
 					end
 				end
 			end
@@ -276,11 +320,11 @@ local function applyMoveUnchecked(state, fromRow, fromCol, move, promotion)
 	end
 
 	piece.moved = true
-	if piece.type == "Pawn" and (move.row == 8 or move.row == 1) then
+	if wasPawn and (move.row == 8 or move.row == 1) then
 		piece.type = PROMOTIONS[promotion] and promotion or "Queen"
 	end
 	state.enPassant = nil
-	if piece.type == "Pawn" and math.abs(move.row - fromRow) == 2 then
+	if wasPawn and math.abs(move.row - fromRow) == 2 then
 		state.enPassant = { row = (move.row + fromRow) / 2, col = fromCol }
 	end
 	if piece.type == "King" then
@@ -288,23 +332,39 @@ local function applyMoveUnchecked(state, fromRow, fromCol, move, promotion)
 		state.castling[piece.side].queenSide = false
 	elseif piece.type == "Rook" then
 		local home = piece.side == "White" and 1 or 8
-		if fromRow == home and fromCol == 1 then state.castling[piece.side].queenSide = false end
-		if fromRow == home and fromCol == 8 then state.castling[piece.side].kingSide = false end
+		if fromRow == home and fromCol == 1 then
+			state.castling[piece.side].queenSide = false
+		end
+		if fromRow == home and fromCol == 8 then
+			state.castling[piece.side].kingSide = false
+		end
 	end
 	if captured and captured.type == "Rook" then
 		local home = captured.side == "White" and 1 or 8
-		if move.row == home and move.col == 1 then state.castling[captured.side].queenSide = false end
-		if move.row == home and move.col == 8 then state.castling[captured.side].kingSide = false end
+		if move.row == home and move.col == 1 then
+			state.castling[captured.side].queenSide = false
+		end
+		if move.row == home and move.col == 8 then
+			state.castling[captured.side].kingSide = false
+		end
 	end
-	if captured or wasPawn then state.halfMove = 0 else state.halfMove += 1 end
-	if piece.side == "Black" then state.fullMove += 1 end
+	if captured or wasPawn then
+		state.halfMove = 0
+	else
+		state.halfMove += 1
+	end
+	if piece.side == "Black" then
+		state.fullMove += 1
+	end
 	state.turn = other(piece.side)
 	return captured
 end
 
 function ChessEngine.legalMoves(state, row, col)
 	local piece = state.board[row] and state.board[row][col]
-	if not piece then return {} end
+	if not piece then
+		return {}
+	end
 	local legal = {}
 	for _, move in ipairs(pseudoMoves(state, row, col)) do
 		local copy = cloneState(state)
@@ -317,15 +377,26 @@ function ChessEngine.legalMoves(state, row, col)
 end
 
 function ChessEngine.move(state, fromRow, fromCol, toRow, toCol, promotion)
-	if not inside(fromRow, fromCol) or not inside(toRow, toCol) then return false, "Invalid square" end
+	if not inside(fromRow, fromCol) or not inside(toRow, toCol) then
+		return false, "Invalid square"
+	end
 	local piece = state.board[fromRow][fromCol]
-	if not piece then return false, "No piece on that square" end
-	if piece.side ~= state.turn then return false, "It is " .. state.turn .. "'s turn" end
+	if not piece then
+		return false, "No piece on that square"
+	end
+	if piece.side ~= state.turn then
+		return false, "It is " .. state.turn .. "'s turn"
+	end
 	local chosen
 	for _, move in ipairs(ChessEngine.legalMoves(state, fromRow, fromCol)) do
-		if move.row == toRow and move.col == toCol then chosen = move break end
+		if move.row == toRow and move.col == toCol then
+			chosen = move
+			break
+		end
 	end
-	if not chosen then return false, "Illegal move" end
+	if not chosen then
+		return false, "Illegal move"
+	end
 	if piece.type == "Pawn" and (toRow == 1 or toRow == 8) and not PROMOTIONS[promotion] then
 		return false, "Choose Queen, Rook, Bishop, or Knight for promotion"
 	end
@@ -333,8 +404,7 @@ function ChessEngine.move(state, fromRow, fromCol, toRow, toCol, promotion)
 	local key = positionKey(state)
 	state.positionCounts = state.positionCounts or {}
 	state.positionCounts[key] = (state.positionCounts[key] or 0) + 1
-	local status = ChessEngine.status(state)
-	return true, status, captured, chosen
+	return true, ChessEngine.status(state), captured, chosen
 end
 
 function ChessEngine.allLegalMoves(state, side)
@@ -345,7 +415,14 @@ function ChessEngine.allLegalMoves(state, side)
 			local piece = state.board[row][col]
 			if piece and piece.side == side then
 				for _, move in ipairs(ChessEngine.legalMoves(state, row, col)) do
-					table.insert(moves, { fromRow = row, fromCol = col, row = move.row, col = move.col, castle = move.castle, enPassant = move.enPassant })
+					table.insert(moves, {
+						fromRow = row,
+						fromCol = col,
+						row = move.row,
+						col = move.col,
+						castle = move.castle,
+						enPassant = move.enPassant,
+					})
 				end
 			end
 		end
@@ -367,12 +444,18 @@ local function insufficientMaterial(state)
 			end
 		end
 	end
-	if #nonKings == 0 then return true end
-	if #nonKings == 1 and (nonKings[1].type == "Bishop" or nonKings[1].type == "Knight") then return true end
+	if #nonKings == 0 then
+		return true
+	end
+	if #nonKings == 1 and (nonKings[1].type == "Bishop" or nonKings[1].type == "Knight") then
+		return true
+	end
 	if #nonKings == #bishopsBySquareColor and #bishopsBySquareColor > 0 then
 		local color = bishopsBySquareColor[1]
 		for _, otherColor in ipairs(bishopsBySquareColor) do
-			if otherColor ~= color then return false end
+			if otherColor ~= color then
+				return false
+			end
 		end
 		return true
 	end
@@ -383,30 +466,107 @@ function ChessEngine.status(state)
 	local side = state.turn
 	local check = ChessEngine.inCheck(state, side)
 	local moves = ChessEngine.allLegalMoves(state, side)
-	-- Checkmate and stalemate take precedence over automatic draw counters.
 	if #moves == 0 then
-		if check then return { text = "Checkmate — " .. other(side) .. " wins", check = true, checkmate = true, stalemate = false, winner = other(side), gameOver = true } end
-		return { text = "Stalemate — draw", check = false, checkmate = false, stalemate = true, gameOver = true, drawReason = "stalemate" }
+		if check then
+			return {
+				text = "Checkmate — " .. other(side) .. " wins",
+				check = true,
+				checkmate = true,
+				stalemate = false,
+				winner = other(side),
+				gameOver = true,
+			}
+		end
+		return {
+			text = "Stalemate — draw",
+			check = false,
+			checkmate = false,
+			stalemate = true,
+			gameOver = true,
+			drawReason = "stalemate",
+		}
 	end
 	local currentKey = positionKey(state)
 	local repetitionCount = state.positionCounts and state.positionCounts[currentKey] or 0
 	local canClaimThreefold = repetitionCount >= 3
 	local canClaimFiftyMove = (state.halfMove or 0) >= 100
 	if repetitionCount >= 5 then
-		return { text = "Draw — fivefold repetition", check = check, checkmate = false, stalemate = false, gameOver = true, drawReason = "fivefold repetition" }
+		return {
+			text = "Draw — fivefold repetition",
+			check = check,
+			checkmate = false,
+			stalemate = false,
+			gameOver = true,
+			drawReason = "fivefold repetition",
+		}
 	end
 	if (state.halfMove or 0) >= 150 then
-		return { text = "Draw — seventy-five-move rule", check = check, checkmate = false, stalemate = false, gameOver = true, drawReason = "seventy-five-move rule" }
+		return {
+			text = "Draw — seventy-five-move rule",
+			check = check,
+			checkmate = false,
+			stalemate = false,
+			gameOver = true,
+			drawReason = "seventy-five-move rule",
+		}
 	end
 	if insufficientMaterial(state) then
-		return { text = "Draw — insufficient material", check = check, checkmate = false, stalemate = false, gameOver = true, drawReason = "insufficient material" }
+		return {
+			text = "Draw — insufficient material",
+			check = check,
+			checkmate = false,
+			stalemate = false,
+			gameOver = true,
+			drawReason = "insufficient material",
+		}
 	end
-	if check then return { text = side .. " is in check", check = true, checkmate = false, stalemate = false, gameOver = false, canClaimThreefold = canClaimThreefold, canClaimFiftyMove = canClaimFiftyMove } end
-	return { text = side .. " to move", check = false, checkmate = false, stalemate = false, gameOver = false, canClaimThreefold = canClaimThreefold, canClaimFiftyMove = canClaimFiftyMove }
+	if check then
+		return {
+			text = side .. " is in check",
+			check = true,
+			checkmate = false,
+			stalemate = false,
+			gameOver = false,
+			canClaimThreefold = canClaimThreefold,
+			canClaimFiftyMove = canClaimFiftyMove,
+		}
+	end
+	return {
+		text = side .. " to move",
+		check = false,
+		checkmate = false,
+		stalemate = false,
+		gameOver = false,
+		canClaimThreefold = canClaimThreefold,
+		canClaimFiftyMove = canClaimFiftyMove,
+	}
 end
 
 function ChessEngine.copy(state)
 	return cloneState(state)
+end
+
+-- For bots: material + mobility evaluation (centipawn-ish)
+function ChessEngine.evaluate(state)
+	local values = { Pawn = 100, Knight = 320, Bishop = 330, Rook = 500, Queen = 900, King = 0 }
+	local score = 0
+	for row = 1, 8 do
+		for col = 1, 8 do
+			local p = state.board[row][col]
+			if p then
+				local v = values[p.type] or 0
+				if p.side == "White" then
+					score += v
+				else
+					score -= v
+				end
+			end
+		end
+	end
+	local whiteMoves = #ChessEngine.allLegalMoves(state, "White")
+	local blackMoves = #ChessEngine.allLegalMoves(state, "Black")
+	score += (whiteMoves - blackMoves) * 2
+	return score
 end
 
 return ChessEngine
