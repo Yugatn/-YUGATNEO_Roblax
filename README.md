@@ -45,7 +45,7 @@ A Roblox Studio chess game prototype for the YUGATNEO world. This branch uses on
 
 ## Input reliability and engine checks
 
-- Board input intersects the camera ray with the board plane and maps the point to a row/column on the single board. This avoids depending on which tall piece part a raycast hits and sends only row/column coordinates to the server.
+- Board selection uses server-created `ClickDetector`s on all 64 squares and each piece's clickable base. This avoids depending on custom screen-ray coordinate calculations; both the piece and empty destination square send the same validated square coordinate into the server move handler. This avoids depending on which tall piece part a raycast hits and sends only row/column coordinates to the server.
 - The server rate-limits board-click requests and returns player-specific feedback for invalid squares, ended games, pending promotion, and the wrong side to move. The server remains authoritative for turn ownership and legal moves.
 - The engine resets the half-move counter on pawn promotion as required by the 50-move-rule counter semantics.
 - A manual engine smoke-test harness is available at [`tests/ChessEngineSmokeTest.lua`](tests/ChessEngineSmokeTest.lua). Copy it into a temporary Script under `ServerScriptService` and run Play; it checks standard starting-position perft counts at depths 1–3 (20, 400, 8902). Remove the temporary Script after testing.
