@@ -512,19 +512,30 @@ controlEvent.OnClientEvent:Connect(function(action, payload, fromRow, fromCol)
 end)
 
 
--- Reliable board input: raycast under the mouse and send only the target square.
--- The server checks turn ownership, team quiz state, and full chess legality.
-local mouse = player:GetMouse()
+-- Reliable board input: raycast only against the chess arena.
+-- Using Mouse.Target can select the avatar or unrelated scenery and can be inconsistent
+-- while Scriptable camera mode is active. An Include filter makes the intended target explicit.
 local lastBoardClick = 0
+local clickSequence = 0
 UserInputService.InputBegan:Connect(function(input, gameProcessed)
-	if gameProcessed or input.UserInputType ~= Enum.UserInputType.MouseButton1 then return end
-	if not mouse.Target then return end
-	local target = mouse.Target
-	local row, col
-	local arena = workspace:FindFirstChild("YUGATNEO_ChessArena")
-	if not arena then return end
+	if input.UserInputType ~= Enum.UserInputType.MouseButton1 then return end
+	if gameProcessed then return end
 
-	-- First resolve a square tile, then a part belonging to a chess piece model.
+	local arena = workspace:FindFirstChild("YUGATNEO_ChessArena")
+	local cameraNow = workspace.CurrentCamera
+	if not arena or not cameraNow then return end
+
+	local mouseLocation = UserInputService:GetMouseLocation()
+	local unitRay = cameraNow:ScreenPointToRay(mouseLocation.X, mouseLocation.Y)
+	local rayParams = RaycastParams.new()
+	rayParams.FilterType = Enum.RaycastFilterType.Include
+	rayParams.FilterDescendantsInstances = { arena }
+	rayParams.IgnoreWater = true
+	local hit = workspace:Raycast(unitRay.Origin, unitRay.Direction * 1000, rayParams)
+	if not hit or not hit.Instance then return end
+
+	local target = hit.Instance
+	local row, col
 	local current = target
 	while current and current ~= arena do
 		local r = current:GetAttribute("Row")
@@ -536,13 +547,16 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
 		current = current.Parent
 	end
 	if not row or not col then return end
+
 	local board = arena:FindFirstChild("Board")
 	local pieces = arena:FindFirstChild("Pieces")
-	if not (board and target:IsDescendantOf(arena) and (target:IsDescendantOf(board) or (pieces and target:IsDescendantOf(pieces)))) then
+	if not (board and (target:IsDescendantOf(board) or (pieces and target:IsDescendantOf(pieces)))) then
 		return
 	end
+
 	local now = os.clock()
 	if now - lastBoardClick < 0.08 then return end
 	lastBoardClick = now
-	controlEvent:FireServer("BoardClick", { row = row, col = col })
+	clickSequence += 1
+	controlEvent:FireServer("BoardClick", { row = row, col = col, sequence = clickSequence })
 end)
