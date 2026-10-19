@@ -67,6 +67,7 @@ local engineState = ChessEngine.newGame()
 local selectedPiece = nil
 local selectedTile = nil
 local pendingPromotion = nil
+local gameOver = false
 local tryMove
 
 local WHITE = Color3.fromRGB(238, 232, 218)
@@ -250,6 +251,7 @@ local function makePiece(pieceType, side, row, col)
 	occupancy[key(row, col)] = model
 
 	local function onPieceClicked(player)
+		if gameOver or pendingPromotion then return end
 		local currentRow = model:GetAttribute("Row")
 		local currentCol = model:GetAttribute("Col")
 		if model.Parent and occupancy[key(currentRow, currentCol)] == model then
@@ -336,6 +338,7 @@ local function isValidMove(piece, toRow, toCol)
 end
 
 tryMove = function(toRow, toCol, promotionChoice)
+	if gameOver then return end
 	if pendingPromotion and not promotionChoice then return end
 	if not selectedPiece or not selectedPiece.Parent then
 		selectedPiece = nil
@@ -401,6 +404,7 @@ tryMove = function(toRow, toCol, promotionChoice)
 	controlEvent:FireAllClients("ClearHighlights")
 	currentTurn = engineState.turn
 	local status = ChessEngine.status(engineState)
+	gameOver = status.gameOver
 	setStatus(status.text)
 end
 
@@ -411,6 +415,7 @@ local function resetGame()
 	table.clear(occupancy)
 	selectedPiece = nil
 	pendingPromotion = nil
+	gameOver = false
 	currentTurn = "White"
 	engineState = ChessEngine.newGame()
 	for col = 1, 8 do
