@@ -81,7 +81,7 @@ local subtitle = Instance.new("TextLabel")
 subtitle.Position = UDim2.new(0, 17, 0, 32)
 subtitle.Size = UDim2.new(1, -34, 0, 16)
 subtitle.BackgroundTransparency = 1
-subtitle.Text = "CLASSIC CHESS • TWO SIDES • ONE BOARD"
+subtitle.Text = "CLASSIC CHESS • TWO BOARDS • SHARED MATCH"
 subtitle.TextColor3 = COLORS.muted
 subtitle.Font = Enum.Font.GothamMedium
 subtitle.TextSize = 9
@@ -439,13 +439,14 @@ controlEvent.OnClientEvent:Connect(function(action, payload, fromRow, fromCol)
 				previousCameraFOV = camera.FieldOfView
 			end
 			camera.CameraType = Enum.CameraType.Scriptable
-			chessViewLabel.Text = "CHESS BOARD • BOARD VIEW"
-			local target = typeof(payload) == "Vector3" and payload or Vector3.new(0, 1, 0)
+			local side = typeof(payload) == "table" and payload.side or "White"
+			local target = typeof(payload) == "table" and payload.center or (typeof(payload) == "Vector3" and payload or Vector3.new(0, 1, 0))
+			chessViewLabel.Text = side .. " • CHESS BOARD VIEW"
 			local boardSpan = 36
 			local verticalFov = math.rad(55)
 			local requiredDistance = (boardSpan / 2) / math.tan(verticalFov / 2)
 			local height = math.max(34, requiredDistance * 0.78)
-			local depth = math.max(18, height * 0.48)
+			local depth = math.max(18, height * 0.48) * (side == "White" and -1 or 1)
 			activeChessCameraCFrame = CFrame.lookAt(target + Vector3.new(0, height, depth), target)
 			camera.FieldOfView = 55
 			RunService:UnbindFromRenderStep(CAMERA_BIND_NAME)
@@ -486,20 +487,28 @@ controlEvent.OnClientEvent:Connect(function(action, payload, fromRow, fromCol)
 	elseif action == "LegalMoves" then
 		restoreHighlights()
 		local arena = workspace:FindFirstChild("YUGATNEO_ChessArena")
-		local board = arena and arena:FindFirstChild("Board")
-		if not board then return end
-		if fromRow and fromCol then
-			local origin = board:FindFirstChild("Square_" .. fromRow .. "_" .. fromCol)
-			if origin then
-				highlighted[origin] = getTileColor(fromRow, fromCol)
-				origin.Color = COLORS.gold
-			end
+		local boards = {}
+		if arena then
+			local whiteBoard = arena:FindFirstChild("Board")
+			local blackBoard = arena:FindFirstChild("BlackBoard")
+			if whiteBoard then table.insert(boards, whiteBoard) end
+			if blackBoard then table.insert(boards, blackBoard) end
 		end
-		for _, move in ipairs(payload or {}) do
-			local tile = board:FindFirstChild("Square_" .. move.row .. "_" .. move.col)
-			if tile then
-				highlighted[tile] = getTileColor(move.row, move.col)
-				tile.Color = COLORS.green
+		if #boards == 0 then return end
+		for _, board in ipairs(boards) do
+			if fromRow and fromCol then
+				local origin = board:FindFirstChild("Square_" .. fromRow .. "_" .. fromCol)
+				if origin then
+					highlighted[origin] = getTileColor(fromRow, fromCol)
+					origin.Color = COLORS.gold
+				end
+			end
+			for _, move in ipairs(payload or {}) do
+				local tile = board:FindFirstChild("Square_" .. move.row .. "_" .. move.col)
+				if tile then
+					highlighted[tile] = getTileColor(move.row, move.col)
+					tile.Color = COLORS.green
+				end
 			end
 		end
 	end
@@ -544,9 +553,13 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
 
 	local board = arena:FindFirstChild("Board")
 	local pieces = arena:FindFirstChild("Pieces")
-	if not (board and (target:IsDescendantOf(board) or (pieces and target:IsDescendantOf(pieces)))) then
-		return
-	end
+	local blackBoard = arena:FindFirstChild("BlackBoard")
+	local blackPieces = arena:FindFirstChild("BlackPieces")
+	local onBoard = (board and target:IsDescendantOf(board))
+		or (pieces and target:IsDescendantOf(pieces))
+		or (blackBoard and target:IsDescendantOf(blackBoard))
+		or (blackPieces and target:IsDescendantOf(blackPieces))
+	if not onBoard then return end
 
 	local now = os.clock()
 	if now - lastBoardClick < 0.08 then return end
