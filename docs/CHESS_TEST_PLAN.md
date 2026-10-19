@@ -34,7 +34,7 @@ This checklist is required before treating the prototype as tournament-ready. Th
 
 
 ## Cooperative team quiz
-- [ ] Start Studio server with at least three clients. Confirm first two are assigned to opposite sides and third can join White or Black.
+- [ ] Start Studio server with at least three clients. Claim White and Black using the fields or HUD; confirm a third client can join an occupied team using the team buttons.
 - [ ] Add a second human to White. Clicking a White piece opens the quiz for all White teammates and does not yet select/highlight the piece.
 - [ ] Submit a wrong answer: that player receives feedback and cannot answer again in the same quiz; other teammates can still answer.
 - [ ] The first correct answer closes the quiz and grants only that player control of the pending piece selection.
@@ -42,6 +42,8 @@ This checklist is required before treating the prototype as tournament-ready. Th
 - [ ] If nobody answers correctly within 20 seconds, the quiz closes and the team can retry by clicking a friendly piece.
 - [ ] When only one human is on a side, piece selection works without a quiz.
 - [ ] Joining a full team (3 players) is rejected; players cannot join both teams or switch teams during the match.
+- [ ] With a primary player already occupying White, use JOIN WHITE TEAM from another client; verify it joins as a teammate instead of being rejected because the seat is occupied.
+- [ ] Repeat for Black, and verify the team quiz starts only when that side has at least two human members.
 - [ ] Resetting during a quiz clears the quiz and leaves no stale selection.
 - [ ] Test White team and Black team independently, including after check, captures, promotion, and game end.
 
