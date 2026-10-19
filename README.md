@@ -22,8 +22,10 @@ This is not yet a complete tournament chess implementation. Check/checkmate vali
 
 Both scripts are required for the on-screen controls. If you only install the server script, the board and pieces will appear but the control panel will not.
 
-## Rojo
-The `default.project.json` maps both scripts into Roblox services. If you use Rojo, sync the project from the repository root.
+## GitHub, Rojo, and publishing
+The `default.project.json` maps both scripts into Roblox services. For live sync, install Rojo and its Studio plugin, clone this repository locally, then run `rojo serve` and connect the plugin in Studio. GitHub changes reach Studio after you pull them into the local checkout; GitHub does not directly connect to your running Studio session.
+
+The GitHub Actions workflow `.github/workflows/roblox-ci.yml` builds the place on pushes and pull requests. It can also publish manually to Roblox when you run the workflow with publishing enabled and configure `ROBLOX_API_KEY`, `ROBLOX_UNIVERSE_ID`, and `ROBLOX_PLACE_ID` in GitHub Actions secrets. Publishing is intentionally manual by default. See [the full setup guide](docs/ROBLOX_GITHUB_SYNC.md).
 
 ## Project files
 - `src/server/ChessArena.server.lua` — server-side board, piece generation, turn handling, captures, and basic move validation.
