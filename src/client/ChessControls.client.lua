@@ -294,8 +294,13 @@ exitTelescope.Font = Enum.Font.GothamBold
 exitTelescope.TextSize = 12
 exitTelescope.Parent = telescopeOverlay
 round(exitTelescope, 8)
-local function stopTelescope()
-	telescopeOverlay.Visible = false
+local RunService = game:GetService("RunService")
+local activeChessCameraCFrame = nil
+local CAMERA_BIND_NAME = "YUGATNEO_ChessTopDownCamera"
+
+local function releaseCamera()
+	RunService:UnbindFromRenderStep(CAMERA_BIND_NAME)
+	activeChessCameraCFrame = nil
 	camera = workspace.CurrentCamera
 	if camera then
 		camera.CameraType = previousCameraType or Enum.CameraType.Custom
@@ -303,23 +308,46 @@ local function stopTelescope()
 		if previousCameraCFrame then camera.CFrame = previousCameraCFrame end
 	end
 end
+
+local function stopTelescope()
+	telescopeOverlay.Visible = false
+	releaseCamera()
+end
 exitTelescope.Activated:Connect(stopTelescope)
 
 controlEvent.OnClientEvent:Connect(function(action, payload, fromRow, fromCol)
 	if action == "Telescope" or action == "ChessView" then
 		camera = workspace.CurrentCamera
 		if camera then
-			previousCameraType = camera.CameraType
-			previousCameraSubject = camera.CameraSubject
-			previousCameraCFrame = camera.CFrame
+			-- Capture the normal camera state only when entering the view, not on repeated touch events.
+			if camera.CameraType ~= Enum.CameraType.Scriptable or not activeChessCameraCFrame then
+				previousCameraType = camera.CameraType
+				previousCameraSubject = camera.CameraSubject
+				previousCameraCFrame = camera.CFrame
+			end
 			camera.CameraType = Enum.CameraType.Scriptable
 			if action == "ChessView" then
-				telescopeLabel.Text = "CHESS BOARD • TOP VIEW"
-				camera.CFrame = CFrame.lookAt(payload + Vector3.new(0, 48, 0), payload)
+				telescopeLabel.Text = "CHESS BOARD • BOARD VIEW"
+				-- Board spans about 32 studs. An oblique elevated angle avoids the edge-on
+				-- appearance of a perfectly vertical camera and keeps the full board in frame.
+				local target = Vector3.new(0, 1, 0)
+				activeChessCameraCFrame = CFrame.lookAt(target + Vector3.new(0, 43, 22), target)
+				camera.FieldOfView = 55
+				RunService:UnbindFromRenderStep(CAMERA_BIND_NAME)
+				RunService:BindToRenderStep(CAMERA_BIND_NAME, Enum.RenderPriority.Camera.Value + 1, function()
+					local currentCamera = workspace.CurrentCamera
+					if currentCamera then
+						currentCamera.CameraType = Enum.CameraType.Scriptable
+						currentCamera.CFrame = activeChessCameraCFrame
+					end
+				end)
 			else
+				activeChessCameraCFrame = nil
+				RunService:UnbindFromRenderStep(CAMERA_BIND_NAME)
 				telescopeLabel.Text = "OBSERVATORY • telescope view"
 				camera.CFrame = CFrame.lookAt(payload + Vector3.new(0, 2, 1), Vector3.new(0, 2, 0))
 			end
+			camera.CFrame = activeChessCameraCFrame or camera.CFrame
 			telescopeOverlay.Visible = true
 		end
 	elseif action == "SeatAssigned" then
