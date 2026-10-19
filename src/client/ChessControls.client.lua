@@ -332,8 +332,16 @@ controlEvent.OnClientEvent:Connect(function(action, payload, fromRow, fromCol)
 				telescopeLabel.Text = "CHESS BOARD • BOARD VIEW"
 				-- Board spans about 32 studs. An oblique elevated angle avoids the edge-on
 				-- appearance of a perfectly vertical camera and keeps the full board in frame.
-				local target = Vector3.new(0, 1, 0)
-				activeChessCameraCFrame = CFrame.lookAt(target + Vector3.new(0, 43, 22), target)
+				-- Use the board center sent by the server so camera and board cannot drift apart.
+				local target = typeof(payload) == "Vector3" and payload or Vector3.new(0, 1, 0)
+				local viewport = camera.ViewportSize
+				local boardSpan = 36
+				local verticalFov = math.rad(camera.FieldOfView)
+				local aspect = math.max(viewport.X / math.max(viewport.Y, 1), 1)
+				local requiredDistance = (boardSpan / 2) / math.tan(verticalFov / 2)
+				local height = math.max(34, requiredDistance * 0.78)
+				local depth = math.max(18, height * 0.48)
+				activeChessCameraCFrame = CFrame.lookAt(target + Vector3.new(0, height, depth), target)
 				camera.FieldOfView = 55
 				RunService:UnbindFromRenderStep(CAMERA_BIND_NAME)
 				RunService:BindToRenderStep(CAMERA_BIND_NAME, Enum.RenderPriority.Camera.Value + 1, function()
