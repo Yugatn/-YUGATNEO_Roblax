@@ -23,8 +23,10 @@ jobs:
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
-      - name: Install Rojo
-        uses: rojo-rbx/setup-rojo@v1
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+      - name: Install Rojo CLI
+        run: cargo install rojo --locked
       - name: Build Roblox place
         run: rojo build -o build.rbxlx
       - name: Upload built place artifact
@@ -44,8 +46,10 @@ jobs:
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
-      - name: Install Rojo
-        uses: rojo-rbx/setup-rojo@v1
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+      - name: Install Rojo CLI
+        run: cargo install rojo --locked
       - name: Build Roblox place
         run: rojo build -o build.rbxlx
       - name: Publish place version
