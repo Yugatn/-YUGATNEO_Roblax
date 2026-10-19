@@ -9,13 +9,13 @@ A Roblox Studio chess game prototype for the YUGATNEO world. The active developm
 - Click a piece to highlight legal destination squares, then click a destination to move.
 - Server-authoritative legal move validation.
 - Turn order, captures, king-safety checks, check, checkmate, and stalemate.
-- Castling, en passant, and pawn promotion (currently auto-promotes to a queen).
+- Castling, en passant, and pawn promotion with a queen, rook, bishop, or knight choice dialog.
 - Modern dark HUD with gold accents, live status, move hints, rules panel, cancel selection, and new-game control.
 
 ## Important implementation notes
 
 - The current server creates one shared board for everyone in the server; it is not yet a matchmaking system with independent boards.
-- Promotion currently defaults to a queen. A player choice menu is a follow-up improvement.
+- The rules engine is a first implementation and still needs scenario-based testing in Roblox Studio before it can be treated as tournament-ready.
 - Draw handling for threefold repetition, the fifty-move rule, and insufficient material is not implemented yet.
 - Automated tests and live Roblox Studio verification are still required before treating the rules engine as tournament-ready.
 
