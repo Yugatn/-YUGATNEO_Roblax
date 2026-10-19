@@ -1,31 +1,31 @@
 # YUGATNEO Roblox — Chess Arena
 
-A Roblox Studio chess game prototype for the YUGATNEO world. This branch adds two synchronized physical boards (one per side), robust mouse-to-square mapping, and automatic entry into the overhead view for bot practice. Changes still require live verification in Roblox Studio.
+A Roblox Studio chess game prototype for the YUGATNEO world. This branch uses one shared chessboard and two separate player fields on opposite sides. Each field has an `E` interaction prompt to claim White or Black. It also includes robust mouse-to-square mapping and automatic overhead view for bot practice. Changes still require live verification in Roblox Studio.
 
 ## Included in this development branch
 
-- Two generated 8×8 boards with synchronized piece displays and 32 pieces on each board.
+- One generated 8×8 chessboard with 32 starting pieces, plus two player fields on opposite sides.
 - Distinct 3D piece silhouettes and readable piece badges.
 - Click a piece to highlight legal destination squares, then click a destination to move.
 - Server-authoritative legal move validation.
 - Turn order, captures, king-safety checks, check, checkmate, and stalemate.
 - Castling, en passant, and pawn promotion with a queen, rook, bishop, or knight choice dialog.
 - Modern dark HUD with gold accents, live status, move hints, rules panel, cancel selection, and host-only new-game control.
-- One shared server-authoritative match displayed on two physical boards: White plays at the first board, Black at the second; first two players are assigned opposite sides, additional players spectate or join a team.
+- One server-authoritative match on one board. Players explicitly claim White/Black by entering the matching field and pressing `E`; the second player starts the match. Other players can spectate or join a team.
 - Move requests are restricted to the seated player whose side is on move; promotion choice is accepted only from the player who initiated that promotion.
 
 ## Important implementation notes
 
-- The two physical boards are two views of the same match, not independent games. Independent table IDs and matchmaking are not implemented yet.
+- There is only one physical board and one match. The two fields are player join points, not additional boards. Independent table IDs and matchmaking are not implemented yet.
 - Seating is a security baseline, not a full lobby: seats are not yet re-queued automatically when a player leaves, and the host is the first player who joined the current server.
 - The rules engine is a first implementation and still needs scenario-based testing in Roblox Studio before it can be treated as tournament-ready.
 - Draw handling is present in the current engine branch but still requires runtime regression testing.
 - Automated tests and live Roblox Studio verification are still required before treating the rules engine as tournament-ready.
 
 ## Top-down chess interaction
-- A green White pad and blue Black pad are placed beside their respective boards. Stepping onto either pad switches the local camera to a stable overhead-oblique view from that side. Pressing **PLAY VS BOT** also opens White's board view automatically. Use **EXIT** to restore the previous camera state.
+- A green White player field and blue Black player field sit on opposite sides of the same board. Approach a field and press `E` to claim that side; stepping onto either field also switches the local camera to an overhead-oblique view of the single board. Pressing **PLAY VS BOT** also opens White's board view automatically. Use **EXIT** to restore the previous camera state.
 - Select a piece and click a highlighted green square. The server validates legal moves through `ChessEngine`, including check restrictions and special chess moves supported by the engine.
-- Both boards show the same match state and synchronize after moves, captures, castling, en passant, promotion, and reset. Independent table IDs and simultaneous separate matches are not implemented. See [`docs/CHESS_TEST_PLAN.md`](docs/CHESS_TEST_PLAN.md) for the camera, move legality, special-rule, and bot test checklist; these tests have not been run automatically in Roblox Studio.
+- Both players use the same board and match state. Independent table IDs and simultaneous separate matches are not implemented. See [`docs/CHESS_TEST_PLAN.md`](docs/CHESS_TEST_PLAN.md) for the camera, move legality, special-rule, and bot test checklist; these tests have not been run automatically in Roblox Studio.
 
 ## Cooperative teams and quiz captain
 
@@ -38,7 +38,7 @@ A Roblox Studio chess game prototype for the YUGATNEO world. This branch adds tw
 ## Focused chess arena
 
 - Removed the four watchtowers, perimeter fence and decorative rails, telescopes, target range, reaction-time pad, memory challenge, computer desk, phone booth, and character sunglasses/beard styling. These features were unrelated to chess and made the play area visually crowded.
-- The environment now consists of two synchronized chessboards, their pieces, the status panel, a compact 120×80 floor, and separate White/Black pads for overhead chess views.
+- The environment now consists of one chessboard, its pieces, a status panel, a compact floor, and separate White/Black player fields on opposite sides.
 - The camera overlay is now chess-only; telescope camera actions and labels were removed.
 - The floor is 120×80 studs to fit the two chessboards side by side without bringing back unrelated scenery.
 
