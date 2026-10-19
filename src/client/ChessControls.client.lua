@@ -515,35 +515,56 @@ controlEvent.OnClientEvent:Connect(function(action, payload, fromRow, fromCol)
 end)
 
 
--- Reliable board input: intersect the mouse ray with the chessboard plane.
--- This does not depend on which tall piece part the ray hits, so clicking a piece
--- still maps to the square directly beneath it. Both boards share logical coordinates.
+-- Reliable board input: prefer the actual hit piece/square attributes, then fall back
+-- to board-plane intersection if a camera/geometry edge case produces no tagged hit.
 local lastBoardClick = 0
 local clickSequence = 0
 UserInputService.InputBegan:Connect(function(input, gameProcessed)
 	if input.UserInputType ~= Enum.UserInputType.MouseButton1 or gameProcessed then return end
 	local cameraNow = workspace.CurrentCamera
-	if not cameraNow then return end
+	local arena = workspace:FindFirstChild("YUGATNEO_ChessArena")
+	if not cameraNow or not arena then return end
 	local mouseLocation = UserInputService:GetMouseLocation()
 	local unitRay = cameraNow:ScreenPointToRay(mouseLocation.X, mouseLocation.Y)
-	local direction = unitRay.Direction
-	if math.abs(direction.Y) < 0.0001 then return end
-	local boardPlaneY = 1.175
-	local distance = (boardPlaneY - unitRay.Origin.Y) / direction.Y
-	if distance <= 0 then return end
-	local point = unitRay.Origin + direction * distance
-	local boardCenterX
-	for _, centerX in ipairs({ 0, 40 }) do
-		if point.X >= centerX - 16 and point.X < centerX + 16
-			and point.Z >= -16 and point.Z < 16 then
-			boardCenterX = centerX
-			break
+	local row, col
+	local rayParams = RaycastParams.new()
+	rayParams.FilterType = Enum.RaycastFilterType.Include
+	rayParams.FilterDescendantsInstances = { arena }
+	rayParams.IgnoreWater = true
+	local hit = workspace:Raycast(unitRay.Origin, unitRay.Direction * 1000, rayParams)
+	if hit and hit.Instance then
+		local current = hit.Instance
+		while current and current ~= arena do
+			local r = current:GetAttribute("Row")
+			local c = current:GetAttribute("Col")
+			if r ~= nil and c ~= nil then
+				row, col = tonumber(r), tonumber(c)
+				break
+			end
+			current = current.Parent
 		end
 	end
-	if not boardCenterX then return end
-	local col = math.floor((point.X - boardCenterX + 16) / 4) + 1
-	local row = math.floor((point.Z + 16) / 4) + 1
-	if row < 1 or row > 8 or col < 1 or col > 8 then return end
+	-- Fallback for missed geometry: intersect the ray with the board surface.
+	if not row or not col then
+		local direction = unitRay.Direction
+		if math.abs(direction.Y) < 0.0001 then return end
+		local boardPlaneY = 1.175
+		local distance = (boardPlaneY - unitRay.Origin.Y) / direction.Y
+		if distance <= 0 then return end
+		local point = unitRay.Origin + direction * distance
+		local boardCenterX
+		for _, centerX in ipairs({ 0, 40 }) do
+			if point.X >= centerX - 16 and point.X < centerX + 16
+				and point.Z >= -16 and point.Z < 16 then
+				boardCenterX = centerX
+				break
+			end
+		end
+		if not boardCenterX then return end
+		col = math.floor((point.X - boardCenterX + 16) / 4) + 1
+		row = math.floor((point.Z + 16) / 4) + 1
+	end
+	if not row or not col or row < 1 or row > 8 or col < 1 or col > 8 then return end
 	local now = os.clock()
 	if now - lastBoardClick < 0.08 then return end
 	lastBoardClick = now
