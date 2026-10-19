@@ -35,13 +35,12 @@ A Roblox Studio chess game prototype for the YUGATNEO world. This branch adds a 
 - The server decides the correct answer, controls quiz state, assigns the move captain, and still validates the chess move through `ChessEngine`.
 - This is an initial prototype: questions are a small fixed set, team membership is limited to three per side, and no persistent team/turn statistics or separate match tables exist. Test with multiple Studio clients before publishing.
 
-## Reliable board input and world props
+## Focused chess arena
 
-- Piece and square selection now uses a client mouse raycast and sends only the target row/column through `ChessControlEvent`; the server checks side-to-move, player assignment, selection ownership, and legal moves in `ChessEngine`.
-- Removed overlapping `ClickDetector` listeners from the chessboard and piece decorations to avoid input priority and character-distance issues. The client raycast is only an input mechanism, not an authority for legal moves.
-- Added a study desk with a computer terminal and an interactive public telephone booth beside the board.
-- The computer and phone prompts currently show informational status messages; they are visual world props, not yet connected to a real browser, telephony, or navigation system.
-- Reference used: Roblox Creator Hub documentation for [ClickDetector](https://create.roblox.com/docs/reference/engine/classes/ClickDetector) and [RemoteEvents](https://create.roblox.com/docs/scripting/events/remote). This implementation uses original project code rather than copying a third-party chess engine with unclear or restrictive licensing.
+- Removed the four watchtowers, perimeter fence and decorative rails, telescopes, target range, reaction-time pad, memory challenge, computer desk, phone booth, and character sunglasses/beard styling. These features were unrelated to chess and made the play area visually crowded.
+- The environment now consists of the chessboard and pieces, the status panel, a compact floor, and the green walk-on pad used to enter the overhead chess view.
+- The camera overlay is now chess-only; telescope camera actions and labels were removed.
+- The floor was reduced to 80×80 studs so the arena reads as a compact chess area rather than a large courtyard.
 
 ## Input reliability and engine checks
 
