@@ -88,9 +88,6 @@ local function assignPlayer(player)
 		playerSides[player.UserId] = "White"
 	elseif not seatPlayers.Black then
 		seatPlayers.Black = player.UserId
-	end
-	if playerSides[player.UserId] == "Black" then
-		seatPlayers.Black = player.UserId
 		playerSides[player.UserId] = "Black"
 	end
 	if not hostUserId then hostUserId = player.UserId end
