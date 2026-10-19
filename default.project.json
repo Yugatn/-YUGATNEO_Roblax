@@ -4,6 +4,9 @@
     "$className": "DataModel",
     "ServerScriptService": {
       "$className": "ServerScriptService",
+      "ChessEngine": {
+        "$path": "src/server/ChessEngine.lua"
+      },
       "ChessArena": {
         "$path": "src/server/ChessArena.server.lua"
       }
