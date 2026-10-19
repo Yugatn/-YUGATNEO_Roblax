@@ -1,33 +1,58 @@
 # YUGATNEO Roblox — Chess Arena
 
-A Roblox Studio chess prototype for the YUGATNEO world.
+A Roblox Studio chess game prototype for the YUGATNEO world. This branch adds a top-down board-view camera to the server-side chess rules engine and in-game HUD. Changes still require live verification in Roblox Studio.
 
-## Included
-- Automatically generated 8×8 chessboard and 32 starting pieces.
-- Distinct piece silhouettes plus a letter badge: P (pawn), R (rook), N (knight), B (bishop), Q (queen), K (king).
-- Click a piece, then click a destination square to move it.
-- Turn-based play for White and Black.
-- Captures and basic movement rules for all six piece types.
-- On-screen controls: instructions, cancel selection, and reset/new game.
-- Server-side move validation for basic piece movement.
+## Included in this development branch
 
-## Prototype limitations
-This is not yet a complete tournament chess implementation. Check/checkmate validation, castling, en passant, pawn promotion, separate simultaneous matches, matchmaking, persistent ratings, and spectator tools are not implemented yet. The reset button restarts the shared board for everyone in the server.
+- Generated 8×8 board and 32 starting pieces.
+- Distinct 3D piece silhouettes and readable piece badges.
+- Click a piece to highlight legal destination squares, then click a destination to move.
+- Server-authoritative legal move validation.
+- Turn order, captures, king-safety checks, check, checkmate, and stalemate.
+- Castling, en passant, and pawn promotion with a queen, rook, bishop, or knight choice dialog.
+- Modern dark HUD with gold accents, live status, move hints, rules panel, cancel selection, and host-only new-game control.
+- Basic server-side seating for the current shared board: first player is White, second player is Black, additional players spectate.
+- Move requests are restricted to the seated player whose side is on move; promotion choice is accepted only from the player who initiated that promotion.
 
-## Run in Roblox Studio (manual setup)
-1. Open Roblox Studio and create a **Baseplate** experience.
-2. In **ServerScriptService**, create a **Script** named `ChessArena`; paste in `src/server/ChessArena.server.lua`.
-3. In **StarterPlayer > StarterPlayerScripts**, create a **LocalScript** named `ChessControls`; paste in `src/client/ChessControls.client.lua`.
-4. Press **Play**. The server generates the board and pieces, and the client script adds the control panel.
+## Important implementation notes
 
-Both scripts are required for the on-screen controls. If you only install the server script, the board and pieces will appear but the control panel will not.
+- The current server still creates one shared board for everyone in the server; independent tables and matchmaking are not implemented yet.
+- Seating is a security baseline, not a full lobby: seats are not yet re-queued automatically when a player leaves, and the host is the first player who joined the current server.
+- The rules engine is a first implementation and still needs scenario-based testing in Roblox Studio before it can be treated as tournament-ready.
+- Draw handling for threefold repetition, the fifty-move rule, and insufficient material is not implemented yet.
+- Automated tests and live Roblox Studio verification are still required before treating the rules engine as tournament-ready.
 
-## GitHub, Rojo, and publishing
-The `default.project.json` maps both scripts into Roblox services. For live sync, install Rojo and its Studio plugin, clone this repository locally, then run `rojo serve` and connect the plugin in Studio. GitHub changes reach Studio after you pull them into the local checkout; GitHub does not directly connect to your running Studio session.
+## Top-down chess interaction
+- A green walk-on pad is placed beside the chessboard. Stepping onto it switches the local camera to a stable oblique overhead view, calculated from the board center and viewport. Use the on-screen **EXIT** control to restore the previous camera state.
+- Select a piece and click a highlighted green square. The server validates legal moves through `ChessEngine`, including check restrictions and special chess moves supported by the engine.
+- This is still a shared-board prototype. Independent table IDs and simultaneous separate matches are not implemented. See [`docs/CHESS_TEST_PLAN.md`](docs/CHESS_TEST_PLAN.md) for the camera, move legality, special-rule, and bot test checklist; these tests have not been run automatically in Roblox Studio.
 
-The GitHub Actions workflow `.github/workflows/roblox-ci.yml` builds the place on pushes and pull requests. It can also publish manually to Roblox when you run the workflow with publishing enabled and configure `ROBLOX_API_KEY`, `ROBLOX_UNIVERSE_ID`, and `ROBLOX_PLACE_ID` in GitHub Actions secrets. Publishing is intentionally manual by default. See [the full setup guide](docs/ROBLOX_GITHUB_SYNC.md).
+## Run in Roblox Studio
 
-## Project files
-- `src/server/ChessArena.server.lua` — server-side board, piece generation, turn handling, captures, and basic move validation.
-- `src/client/ChessControls.client.lua` — on-screen buttons and player instructions.
-- `default.project.json` — Rojo project mapping.
+1. Open this repository folder on your Mac.
+2. In Terminal, run `rojo serve default.project.json`.
+3. Open Roblox Studio and connect the Rojo plugin to `localhost:34872`.
+4. Press **Play**.
+5. In Explorer, check `ServerScriptService/ChessEngine`, `ServerScriptService/ChessArena`, and `StarterPlayer/StarterPlayerScripts/ChessControls`.
+
+If Rojo is already running on port 34872, do not launch a second server. Use the existing Terminal window or stop the old process deliberately before restarting.
+
+## GitHub and branches
+
+This work is isolated on `feature/chess-topdown-interaction`; `main` remains unchanged while the changes are reviewed. To test this branch locally:
+
+```bash
+git fetch origin
+git switch feature/chess-topdown-interaction
+git pull
+```
+
+Then reconnect Rojo if needed. GitHub changes do not appear in Studio until the local checkout has been updated.
+
+## Files
+
+- `src/server/ChessEngine.lua` — chess movement, attack detection, legal move filtering, check/checkmate/stalemate, castling, en passant, promotion.
+- `src/server/ChessArena.server.lua` — board and piece rendering, server-side interaction, simple player seats, promotion rendering, status, host-authorized reset.
+- `src/client/ChessControls.client.lua` — in-game HUD, rules panel, status, legal-move highlighting.
+- `default.project.json` — Rojo mapping.
+- `docs/ROBLOX_GITHUB_SYNC.md` — synchronization and publishing guide.
