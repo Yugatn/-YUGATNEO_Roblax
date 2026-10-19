@@ -7,6 +7,9 @@
       "ChessEngine": {
         "$path": "src/server/ChessEngine.lua"
       },
+      "MatchTable": {
+        "$path": "src/server/MatchTable.lua"
+      },
       "ChessArena": {
         "$path": "src/server/ChessArena.server.lua"
       }

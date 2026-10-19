@@ -1,8 +1,10 @@
--- YUGATNEO Chess: polished controls, move hints, and live status.
+-- YUGATNEO Chess client: lobby, HUD, Scriptable camera locked to table.
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
+
 local player = Players.LocalPlayer
-local controlEvent = ReplicatedStorage:WaitForChild("ChessControlEvent")
+local event = ReplicatedStorage:WaitForChild("ChessControlEvent")
 
 local COLORS = {
 	panel = Color3.fromRGB(17, 22, 32),
@@ -15,291 +17,246 @@ local COLORS = {
 	red = Color3.fromRGB(151, 75, 64),
 }
 
+local myTableId = nil
+local mySide = nil
+local cameraConn = nil
+local highlighted = {}
+
+local function round(inst, r)
+	local c = Instance.new("UICorner")
+	c.CornerRadius = UDim.new(0, r)
+	c.Parent = inst
+end
+
 local gui = Instance.new("ScreenGui")
 gui.Name = "YUGATNEOChessControls"
 gui.ResetOnSpawn = false
-gui.IgnoreGuiInset = false
-gui.DisplayOrder = 20
+gui.DisplayOrder = 25
 gui.Parent = player:WaitForChild("PlayerGui")
 
-local function round(instance, radius)
-	local corner = Instance.new("UICorner")
-	corner.CornerRadius = UDim.new(0, radius)
-	corner.Parent = instance
-	return corner
-end
-
-local function stroke(instance, color, transparency)
-	local edge = Instance.new("UIStroke")
-	edge.Color = color
-	edge.Transparency = transparency or 0
-	edge.Thickness = 1
-	edge.Parent = instance
-	return edge
-end
-
 local panel = Instance.new("Frame")
-panel.Name = "ControlPanel"
-panel.Position = UDim2.new(0, 20, 0, 20)
-panel.Size = UDim2.new(0, 300, 0, 248)
+panel.Name = "HUD"
+panel.Position = UDim2.new(0, 16, 0, 16)
+panel.Size = UDim2.new(0, 300, 0, 220)
 panel.BackgroundColor3 = COLORS.panel
-panel.BackgroundTransparency = 0.04
 panel.BorderSizePixel = 0
 panel.Parent = gui
-round(panel, 16)
-stroke(panel, Color3.fromRGB(90, 104, 128), 0.35)
+round(panel, 14)
 
-local header = Instance.new("Frame")
-header.Name = "Header"
-header.Size = UDim2.new(1, 0, 0, 58)
-header.BackgroundColor3 = COLORS.panel2
-header.BorderSizePixel = 0
-header.Parent = panel
-round(header, 16)
-
-local headerMask = Instance.new("Frame")
-headerMask.Position = UDim2.new(0, 0, 1, -15)
-headerMask.Size = UDim2.new(1, 0, 0, 15)
-headerMask.BackgroundColor3 = COLORS.panel2
-headerMask.BorderSizePixel = 0
-headerMask.Parent = header
-
-local logo = Instance.new("TextLabel")
-logo.Name = "Brand"
-logo.Position = UDim2.new(0, 16, 0, 7)
-logo.Size = UDim2.new(1, -32, 0, 25)
-logo.BackgroundTransparency = 1
-logo.Text = "♔  YUGATNEO CHESS"
-logo.TextColor3 = COLORS.gold
-logo.Font = Enum.Font.GothamBlack
-logo.TextSize = 18
-logo.TextXAlignment = Enum.TextXAlignment.Left
-logo.Parent = header
-
-local subtitle = Instance.new("TextLabel")
-subtitle.Position = UDim2.new(0, 17, 0, 32)
-subtitle.Size = UDim2.new(1, -34, 0, 16)
-subtitle.BackgroundTransparency = 1
-subtitle.Text = "CLASSIC CHESS • TWO SIDES • ONE BOARD"
-subtitle.TextColor3 = COLORS.muted
-subtitle.Font = Enum.Font.GothamMedium
-subtitle.TextSize = 9
-subtitle.TextXAlignment = Enum.TextXAlignment.Left
-subtitle.Parent = header
-
-local statusCard = Instance.new("Frame")
-statusCard.Name = "StatusCard"
-statusCard.Position = UDim2.new(0, 12, 0, 70)
-statusCard.Size = UDim2.new(1, -24, 0, 48)
-statusCard.BackgroundColor3 = Color3.fromRGB(34, 43, 58)
-statusCard.BorderSizePixel = 0
-statusCard.Parent = panel
-round(statusCard, 10)
-
-local statusDot = Instance.new("Frame")
-statusDot.Position = UDim2.new(0, 12, 0.5, -5)
-statusDot.Size = UDim2.new(0, 10, 0, 10)
-statusDot.BackgroundColor3 = COLORS.gold
-statusDot.BorderSizePixel = 0
-statusDot.Parent = statusCard
-round(statusDot, 5)
+local title = Instance.new("TextLabel")
+title.Size = UDim2.new(1, -24, 0, 28)
+title.Position = UDim2.new(0, 12, 0, 8)
+title.BackgroundTransparency = 1
+title.Text = "♔  YUGATNEO CHESS"
+title.TextColor3 = COLORS.gold
+title.Font = Enum.Font.GothamBlack
+title.TextSize = 18
+title.TextXAlignment = Enum.TextXAlignment.Left
+title.Parent = panel
 
 local statusLabel = Instance.new("TextLabel")
 statusLabel.Name = "Status"
-statusLabel.Position = UDim2.new(0, 30, 0, 0)
-statusLabel.Size = UDim2.new(1, -40, 1, 0)
-statusLabel.BackgroundTransparency = 1
-statusLabel.Text = "White to move"
+statusLabel.Position = UDim2.new(0, 12, 0, 42)
+statusLabel.Size = UDim2.new(1, -24, 0, 48)
+statusLabel.BackgroundColor3 = COLORS.panel2
 statusLabel.TextColor3 = COLORS.text
 statusLabel.Font = Enum.Font.GothamBold
-statusLabel.TextSize = 14
+statusLabel.TextSize = 13
 statusLabel.TextWrapped = true
-statusLabel.TextXAlignment = Enum.TextXAlignment.Left
-statusLabel.Parent = statusCard
+statusLabel.Text = "Walk to a blue Join Pad and hold E to sit at a table."
+statusLabel.Parent = panel
+round(statusLabel, 8)
 
-local function makeButton(name, label, x, y, width, color)
-	local button = Instance.new("TextButton")
-	button.Name = name
-	button.Position = UDim2.new(0, x, 0, y)
-	button.Size = UDim2.new(0, width, 0, 36)
-	button.BackgroundColor3 = color
-	button.BorderSizePixel = 0
-	button.Text = label
-	button.TextColor3 = COLORS.text
-	button.Font = Enum.Font.GothamBold
-	button.TextSize = 12
-	button.AutoButtonColor = true
-	button.Parent = panel
-	round(button, 9)
-	return button
+local function makeBtn(name, text, y, color)
+	local b = Instance.new("TextButton")
+	b.Name = name
+	b.Position = UDim2.new(0, 12, 0, y)
+	b.Size = UDim2.new(1, -24, 0, 32)
+	b.BackgroundColor3 = color
+	b.BorderSizePixel = 0
+	b.Text = text
+	b.TextColor3 = COLORS.text
+	b.Font = Enum.Font.GothamBold
+	b.TextSize = 12
+	b.Parent = panel
+	round(b, 8)
+	return b
 end
 
-local helpButton = makeButton("HelpButton", "♟  RULES", 12, 130, 86, COLORS.blue)
-local deselectButton = makeButton("DeselectButton", "CANCEL", 106, 130, 82, Color3.fromRGB(69, 79, 96))
-local resetButton = makeButton("ResetButton", "NEW GAME", 196, 130, 92, COLORS.red)
-
-local tip = Instance.new("TextLabel")
-tip.Name = "Tip"
-tip.Position = UDim2.new(0, 14, 0, 176)
-tip.Size = UDim2.new(1, -28, 0, 42)
-tip.BackgroundTransparency = 1
-tip.Text = "Select a piece to reveal legal moves.\nClick a highlighted square to move."
-tip.TextColor3 = COLORS.muted
-tip.Font = Enum.Font.Gotham
-tip.TextSize = 11
-tip.TextWrapped = true
-tip.TextXAlignment = Enum.TextXAlignment.Left
-tip.TextYAlignment = Enum.TextYAlignment.Top
-tip.Parent = panel
-
-local helpPanel = Instance.new("Frame")
-helpPanel.Name = "RulesPanel"
-helpPanel.Position = UDim2.new(0, 20, 0, 280)
-helpPanel.Size = UDim2.new(0, 300, 0, 224)
-helpPanel.BackgroundColor3 = COLORS.panel
-helpPanel.BorderSizePixel = 0
-helpPanel.Visible = false
-helpPanel.Parent = gui
-round(helpPanel, 14)
-stroke(helpPanel, COLORS.gold, 0.3)
-
-local helpTitle = Instance.new("TextLabel")
-helpTitle.Position = UDim2.new(0, 14, 0, 10)
-helpTitle.Size = UDim2.new(1, -28, 0, 28)
-helpTitle.BackgroundTransparency = 1
-helpTitle.Text = "HOW TO PLAY"
-helpTitle.TextColor3 = COLORS.gold
-helpTitle.Font = Enum.Font.GothamBlack
-helpTitle.TextSize = 17
-helpTitle.TextXAlignment = Enum.TextXAlignment.Left
-helpTitle.Parent = helpPanel
-
-local helpText = Instance.new("TextLabel")
-helpText.Position = UDim2.new(0, 14, 0, 44)
-helpText.Size = UDim2.new(1, -28, 1, -92)
-helpText.BackgroundTransparency = 1
-helpText.Text = "1. Click one of your pieces.\n2. Green squares show legal destinations.\n3. Click a destination to complete the move.\n\nIncludes check, checkmate, stalemate, castling, en passant and selectable promotion to queen, rook, bishop or knight.\n\nWhite moves first. Capturing the king is never a legal move."
-helpText.TextColor3 = COLORS.text
-helpText.Font = Enum.Font.Gotham
-helpText.TextSize = 12
-helpText.TextWrapped = true
-helpText.TextXAlignment = Enum.TextXAlignment.Left
-helpText.TextYAlignment = Enum.TextYAlignment.Top
-helpText.Parent = helpPanel
-
-local closeHelp = makeButton("CloseHelp", "CLOSE", 14, 184, 272, COLORS.blue)
-closeHelp.Parent = helpPanel
-closeHelp.Position = UDim2.new(0, 14, 1, -44)
-closeHelp.Size = UDim2.new(1, -28, 0, 32)
-
-helpButton.Activated:Connect(function()
-	helpPanel.Visible = not helpPanel.Visible
-end)
-closeHelp.Activated:Connect(function()
-	helpPanel.Visible = false
-end)
-deselectButton.Activated:Connect(function()
-	controlEvent:FireServer("Deselect")
-end)
-resetButton.Activated:Connect(function()
-	controlEvent:FireServer("Reset")
-end)
+local readyBtn = makeBtn("Ready", "I'M READY", 100, COLORS.green)
+local cancelBtn = makeBtn("Cancel", "LEAVE TABLE", 138, Color3.fromRGB(69, 79, 96))
+local resignBtn = makeBtn("Resign", "RESIGN", 176, COLORS.red)
+resignBtn.Visible = false
 
 local promotionPanel = Instance.new("Frame")
-promotionPanel.Name = "PromotionChoice"
 promotionPanel.AnchorPoint = Vector2.new(0.5, 0.5)
 promotionPanel.Position = UDim2.fromScale(0.5, 0.5)
-promotionPanel.Size = UDim2.new(0, 330, 0, 116)
+promotionPanel.Size = UDim2.new(0, 320, 0, 110)
 promotionPanel.BackgroundColor3 = COLORS.panel
-promotionPanel.BorderSizePixel = 0
 promotionPanel.Visible = false
 promotionPanel.Parent = gui
-round(promotionPanel, 14)
-stroke(promotionPanel, COLORS.gold, 0.15)
-
-local promotionTitle = Instance.new("TextLabel")
-promotionTitle.Position = UDim2.new(0, 12, 0, 8)
-promotionTitle.Size = UDim2.new(1, -24, 0, 25)
-promotionTitle.BackgroundTransparency = 1
-promotionTitle.Text = "PROMOTE YOUR PAWN"
-promotionTitle.TextColor3 = COLORS.gold
-promotionTitle.Font = Enum.Font.GothamBlack
-promotionTitle.TextSize = 15
-promotionTitle.Parent = promotionPanel
-
-for index, choice in ipairs({ { "Queen", "♛  QUEEN" }, { "Rook", "♜  ROOK" }, { "Bishop", "♝  BISHOP" }, { "Knight", "♞  KNIGHT" } }) do
-	local button = Instance.new("TextButton")
-	button.Name = choice[1] .. "Promotion"
-	button.Position = UDim2.new(0, 12 + (index - 1) * 79, 0, 48)
-	button.Size = UDim2.new(0, 72, 0, 48)
-	button.BackgroundColor3 = COLORS.panel2
-	button.BorderSizePixel = 0
-	button.Text = choice[2]
-	button.TextColor3 = COLORS.text
-	button.Font = Enum.Font.GothamBold
-	button.TextSize = 10
-	button.TextWrapped = true
-	button.Parent = promotionPanel
-	round(button, 8)
-	button.Activated:Connect(function()
+round(promotionPanel, 12)
+local promoTitle = Instance.new("TextLabel")
+promoTitle.Size = UDim2.new(1, -20, 0, 28)
+promoTitle.Position = UDim2.new(0, 10, 0, 6)
+promoTitle.BackgroundTransparency = 1
+promoTitle.Text = "PROMOTE PAWN"
+promoTitle.TextColor3 = COLORS.gold
+promoTitle.Font = Enum.Font.GothamBlack
+promoTitle.TextSize = 15
+promoTitle.Parent = promotionPanel
+for i, choice in ipairs({ "Queen", "Rook", "Bishop", "Knight" }) do
+	local b = Instance.new("TextButton")
+	b.Position = UDim2.new(0, 12 + (i - 1) * 76, 0, 44)
+	b.Size = UDim2.new(0, 70, 0, 48)
+	b.BackgroundColor3 = COLORS.panel2
+	b.Text = choice
+	b.TextColor3 = COLORS.text
+	b.Font = Enum.Font.GothamBold
+	b.TextSize = 11
+	b.Parent = promotionPanel
+	round(b, 8)
+	b.Activated:Connect(function()
 		promotionPanel.Visible = false
-		controlEvent:FireServer("Promote", choice[1])
+		event:FireServer("Promote", choice)
 	end)
 end
 
-local highlighted = {}
 local function restoreHighlights()
-	for tile, original in pairs(highlighted) do
-		if tile and tile.Parent then tile.Color = original end
+	for tile, color in pairs(highlighted) do
+		if tile and tile.Parent then tile.Color = color end
 	end
 	table.clear(highlighted)
 end
 
-local function getTileColor(row, col)
-	return ((row + col) % 2 == 0) and Color3.fromRGB(238, 232, 218) or Color3.fromRGB(65, 75, 91)
+local function lockCamera(origin)
+	local cam = workspace.CurrentCamera
+	if not cam or not origin then return end
+	cam.CameraType = Enum.CameraType.Scriptable
+	local focus = Vector3.new(origin.x, origin.y + 1, origin.z)
+	local pos = focus + Vector3.new(0, 28, 32)
+	if cameraConn then cameraConn:Disconnect() end
+	cameraConn = RunService.RenderStepped:Connect(function()
+		if cam.CameraType ~= Enum.CameraType.Scriptable then return end
+		cam.CFrame = CFrame.new(pos, focus)
+	end)
 end
 
-controlEvent.OnClientEvent:Connect(function(action, payload, fromRow, fromCol)
-	if action == "SeatAssigned" then
-		local assigned = tostring(payload)
-		if assigned == "White" or assigned == "Black" then
-			statusLabel.Text = "You are " .. assigned .. " — waiting for both players"
-		else
-			statusLabel.Text = "Spectator — both seats are occupied"
+local function unlockCamera()
+	if cameraConn then cameraConn:Disconnect() cameraConn = nil end
+	local cam = workspace.CurrentCamera
+	if cam then cam.CameraType = Enum.CameraType.Custom end
+end
+
+readyBtn.Activated:Connect(function()
+	event:FireServer("Ready", true)
+end)
+cancelBtn.Activated:Connect(function()
+	event:FireServer("Cancel")
+end)
+resignBtn.Activated:Connect(function()
+	event:FireServer("Resign")
+end)
+
+event.OnClientEvent:Connect(function(action, tableId, payload, extra)
+	if action == "Joined" then
+		myTableId = tableId
+		mySide = payload and payload.side
+		local st = payload and payload.state
+		statusLabel.Text = string.format("Table %s · You are %s\n%s", tostring(tableId), tostring(mySide), st and st.statusText or "Waiting")
+		if st and st.origin then lockCamera(st.origin) end
+		resignBtn.Visible = false
+		readyBtn.Visible = true
+		cancelBtn.Visible = true
+	elseif action == "Lobby" or action == "TableState" then
+		if tableId and myTableId and tableId ~= myTableId then return end
+		local st = payload
+		if st then
+			statusLabel.Text = string.format(
+				"Table %s · %s\n%s vs %s\n%s",
+				st.tableId, st.state, st.whiteName, st.blackName, st.statusText or ""
+			)
+			if st.origin then lockCamera(st.origin) end
+			local playing = st.state == "Playing"
+			resignBtn.Visible = playing
+			readyBtn.Visible = st.state == "Ready" or st.state == "Waiting"
+			cancelBtn.Visible = st.state == "Ready" or st.state == "Waiting"
+			if st.state == "Finished" then
+				cancelBtn.Text = "CLEAR TABLE"
+				cancelBtn.Visible = true
+				cancelBtn.Activated:Connect(function()
+					event:FireServer("ClearFinished")
+				end)
+			else
+				cancelBtn.Text = "LEAVE TABLE"
+			end
 		end
-	elseif action == "PromotionRequired" then
-		promotionPanel.Visible = true
-	elseif action == "PromotionHide" then
-		promotionPanel.Visible = false
-	elseif action == "Status" then
-		statusLabel.Text = tostring(payload)
-		if string.find(string.lower(tostring(payload)), "checkmate") or string.find(string.lower(tostring(payload)), "stalemate") then
-			statusDot.BackgroundColor3 = COLORS.red
-		elseif string.find(string.lower(tostring(payload)), "check") then
-			statusDot.BackgroundColor3 = COLORS.gold
-		else
-			statusDot.BackgroundColor3 = COLORS.green
-		end
-	elseif action == "ClearHighlights" then
+	elseif action == "MatchStarted" then
+		statusLabel.Text = "Match started — " .. (payload and payload.statusText or "White to move")
+		resignBtn.Visible = true
+		readyBtn.Visible = false
+		cancelBtn.Visible = false
+		if payload and payload.origin then lockCamera(payload.origin) end
+	elseif action == "MatchEnded" then
+		local st = payload or {}
+		statusLabel.Text = string.format("Finished: %s\n%s", tostring(st.endReason), st.statusText or "")
+		resignBtn.Visible = false
+		readyBtn.Visible = false
+		cancelBtn.Text = "CLEAR TABLE"
+		cancelBtn.Visible = true
+	elseif action == "LeftTable" then
+		myTableId = nil
+		mySide = nil
 		restoreHighlights()
+		unlockCamera()
+		statusLabel.Text = "Left table. Walk to a Join Pad to play again."
+		readyBtn.Visible = true
+		cancelBtn.Visible = true
+		resignBtn.Visible = false
+	elseif action == "Status" then
+		if type(payload) == "string" then
+			statusLabel.Text = payload
+		end
 	elseif action == "LegalMoves" then
 		restoreHighlights()
-		local arena = workspace:FindFirstChild("YUGATNEO_ChessArena")
-		local board = arena and arena:FindFirstChild("Board")
+		local folder = workspace:FindFirstChild("Table_" .. tostring(tableId or myTableId))
+		local board = folder and folder:FindFirstChild("Board")
 		if not board then return end
+		local fromRow = extra and extra.fromRow
+		local fromCol = extra and extra.fromCol
 		if fromRow and fromCol then
 			local origin = board:FindFirstChild("Square_" .. fromRow .. "_" .. fromCol)
 			if origin then
-				highlighted[origin] = getTileColor(fromRow, fromCol)
+				highlighted[origin] = origin.Color
 				origin.Color = COLORS.gold
 			end
 		end
 		for _, move in ipairs(payload or {}) do
 			local tile = board:FindFirstChild("Square_" .. move.row .. "_" .. move.col)
 			if tile then
-				highlighted[tile] = getTileColor(move.row, move.col)
+				highlighted[tile] = tile.Color
 				tile.Color = COLORS.green
 			end
 		end
+	elseif action == "ClearHighlights" then
+		restoreHighlights()
+	elseif action == "PromotionRequired" then
+		promotionPanel.Visible = true
+	elseif action == "PromotionHide" then
+		promotionPanel.Visible = false
+	elseif action == "Error" then
+		statusLabel.Text = "Error: " .. tostring(payload)
 	end
 end)
+
+-- ClearFinished via cancel when finished — handled by reconnecting button above; also support direct:
+local clearBound = false
+cancelBtn.Activated:Connect(function()
+	if cancelBtn.Text == "CLEAR TABLE" then
+		event:FireServer("ClearFinished")
+	else
+		event:FireServer("Cancel")
+	end
+end)
+
+print("[YUGATNEO] Chess client ready — use Join Pad ProximityPrompt.")

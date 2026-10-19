@@ -1,53 +1,47 @@
 # YUGATNEO Roblox — Chess Arena
 
-A Roblox Studio chess game prototype for the YUGATNEO world. The active development branch `feature/full-chess-game` adds a server-side rules engine and a redesigned in-game HUD.
+Playable multiplayer chess for Roblox (YUGATNEO). Development branch: `feature/full-chess-game`.
 
-## Included in this development branch
+## How to play (in Studio)
 
-- Generated 8×8 board and 32 starting pieces.
-- Distinct 3D piece silhouettes and readable piece badges.
-- Click a piece to highlight legal destination squares, then click a destination to move.
-- Server-authoritative legal move validation.
-- Turn order, captures, king-safety checks, check, checkmate, and stalemate.
-- Castling, en passant, and pawn promotion with a queen, rook, bishop, or knight choice dialog.
-- Modern dark HUD with gold accents, live status, move hints, rules panel, cancel selection, and host-only new-game control.
-- Basic server-side seating for the current shared board: first player is White, second player is Black, additional players spectate.
-- Move requests are restricted to the seated player whose side is on move; promotion choice is accepted only from the player who initiated that promotion.
+1. `git switch feature/full-chess-game && git pull`
+2. `rojo serve default.project.json`
+3. Connect Rojo plugin in Roblox Studio → **Play**
+4. Walk to a **blue Join Pad** near a table → hold **E** (ProximityPrompt)
+5. Second player joins the same pad → both press **I'M READY**
+6. Click your piece → green squares show legal moves → click destination
+7. Camera locks to the board (Scriptable) for the match; returns to normal when you leave
 
-## Important implementation notes
+Three independent tables spawn at X = 0, +55, −55.
 
-- The current server still creates one shared board for everyone in the server; independent tables and matchmaking are not implemented yet.
-- Seating is a security baseline, not a full lobby: seats are not yet re-queued automatically when a player leaves, and the host is the first player who joined the current server.
-- The rules engine is a first implementation and still needs scenario-based testing in Roblox Studio before it can be treated as tournament-ready.
-- Draw handling for threefold repetition, the fifty-move rule, and insufficient material is not implemented yet.
-- Automated tests and live Roblox Studio verification are still required before treating the rules engine as tournament-ready.
+## What works now
 
-## Run in Roblox Studio
+- Full legal moves, check / checkmate / stalemate, castling, en passant, promotion choice
+- Server-authoritative rules (`ChessEngine`)
+- Isolated tables (`MatchTable`) with FSM: Idle → Waiting → Ready → Playing → Finished → Idle
+- Only seated players can move; only on their turn
+- Disconnect during play = technical loss for that player
+- Cancel waiting frees the seat
+- Scriptable camera fixed on the table (no vertical camera fight)
+- Modes field ready: Classic / Wager / Challenge (economy later)
 
-1. Open this repository folder on your Mac.
-2. In Terminal, run `rojo serve default.project.json`.
-3. Open Roblox Studio and connect the Rojo plugin to `localhost:34872`.
-4. Press **Play**.
-5. In Explorer, check `ServerScriptService/ChessEngine`, `ServerScriptService/ChessArena`, and `StarterPlayer/StarterPlayerScripts/ChessControls`.
+## Not yet
 
-If Rojo is already running on port 34872, do not launch a second server. Use the existing Terminal window or stop the old process deliberately before restarting.
-
-## GitHub and branches
-
-The feature is being developed on `feature/full-chess-game`; `main` remains unchanged while the new rules and UI are reviewed. To test this branch locally:
-
-```bash
-git fetch origin
-git switch feature/full-chess-game
-git pull
-```
-
-Then reconnect Rojo if needed. GitHub changes do not appear in Studio until the local checkout has been updated.
+- Virtual currency / stakes
+- Friendly challenges (push-ups etc.)
+- Fifty-move / threefold / insufficient material draws
+- Live verification inside Roblox Studio from CI (use local Play)
 
 ## Files
 
-- `src/server/ChessEngine.lua` — chess movement, attack detection, legal move filtering, check/checkmate/stalemate, castling, en passant, promotion.
-- `src/server/ChessArena.server.lua` — board and piece rendering, server-side interaction, simple player seats, promotion rendering, status, host-authorized reset.
-- `src/client/ChessControls.client.lua` — in-game HUD, rules panel, status, legal-move highlighting.
-- `default.project.json` — Rojo mapping.
-- `docs/ROBLOX_GITHUB_SYNC.md` — synchronization and publishing guide.
+| Path | Role |
+|------|------|
+| `src/server/ChessEngine.lua` | Pure rules engine |
+| `src/server/MatchTable.lua` | One table: board, seats, FSM |
+| `src/server/ChessArena.server.lua` | Spawns 3 tables, routes events |
+| `src/client/ChessControls.client.lua` | HUD + Scriptable camera |
+| `default.project.json` | Rojo map |
+
+## Branch
+
+https://github.com/Yugatn/-YUGATNEO_Roblax/tree/feature/full-chess-game
