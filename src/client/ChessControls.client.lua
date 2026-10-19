@@ -41,7 +41,7 @@ end
 local panel = Instance.new("Frame")
 panel.Name = "ControlPanel"
 panel.Position = UDim2.new(0, 20, 0, 20)
-panel.Size = UDim2.new(0, 300, 0, 248)
+panel.Size = UDim2.new(0, 300, 0, 266)
 panel.BackgroundColor3 = COLORS.panel
 panel.BackgroundTransparency = 0.04
 panel.BorderSizePixel = 0
@@ -137,13 +137,14 @@ end
 local helpButton = makeButton("HelpButton", "♟  RULES", 12, 130, 86, COLORS.blue)
 local deselectButton = makeButton("DeselectButton", "CANCEL", 106, 130, 82, Color3.fromRGB(69, 79, 96))
 local resetButton = makeButton("ResetButton", "NEW GAME", 196, 130, 92, COLORS.red)
+local botButton = makeButton("PlayBotButton", "PLAY VS BOT", 12, 220, 276, COLORS.green)
 
 local tip = Instance.new("TextLabel")
 tip.Name = "Tip"
-tip.Position = UDim2.new(0, 14, 0, 176)
-tip.Size = UDim2.new(1, -28, 0, 42)
+tip.Position = UDim2.new(0, 14, 0, 174)
+tip.Size = UDim2.new(1, -28, 0, 38)
 tip.BackgroundTransparency = 1
-tip.Text = "Select a piece to reveal legal moves.\nClick a highlighted square to move."
+tip.Text = "1. Start PLAY VS BOT.  2. Select a piece.\n3. Click a green square to move."
 tip.TextColor3 = COLORS.muted
 tip.Font = Enum.Font.Gotham
 tip.TextSize = 11
@@ -155,7 +156,7 @@ tip.Parent = panel
 local helpPanel = Instance.new("Frame")
 helpPanel.Name = "RulesPanel"
 helpPanel.Position = UDim2.new(0, 20, 0, 280)
-helpPanel.Size = UDim2.new(0, 300, 0, 224)
+helpPanel.Size = UDim2.new(0, 320, 0, 290)
 helpPanel.BackgroundColor3 = COLORS.panel
 helpPanel.BorderSizePixel = 0
 helpPanel.Visible = false
@@ -178,7 +179,7 @@ local helpText = Instance.new("TextLabel")
 helpText.Position = UDim2.new(0, 14, 0, 44)
 helpText.Size = UDim2.new(1, -28, 1, -92)
 helpText.BackgroundTransparency = 1
-helpText.Text = "1. Click one of your pieces.\n2. Green squares show legal destinations.\n3. Click a destination to complete the move.\n\nIncludes check, checkmate, stalemate, castling, en passant and selectable promotion to queen, rook, bishop or knight.\n\nWhite moves first. Capturing the king is never a legal move."
+helpText.Text = "START A GAME\nPress PLAY VS BOT. You play White; the bot plays Black.\n\nHOW TO MOVE\n1. Click one of your pieces.\n2. Green squares are legal destinations.\n3. Click a green square to move.\n4. The bot replies after your move.\n\nPIECES\nPawn: forward; captures diagonally.\nRook: straight lines. Bishop: diagonals.\nQueen: straight and diagonal.\nKnight: an L-shape. King: one square.\n\nGOAL\nCheckmate the opposing king. Protect your own king. The status panel tells you whose turn it is and announces check, checkmate or stalemate. Special moves include castling, en passant and pawn promotion. Press CANCEL to clear your selection."
 helpText.TextColor3 = COLORS.text
 helpText.Font = Enum.Font.Gotham
 helpText.TextSize = 12
@@ -203,6 +204,9 @@ deselectButton.Activated:Connect(function()
 end)
 resetButton.Activated:Connect(function()
 	controlEvent:FireServer("Reset")
+end)
+botButton.Activated:Connect(function()
+	controlEvent:FireServer("PlayBot")
 end)
 
 local promotionPanel = Instance.new("Frame")
