@@ -531,6 +531,7 @@ controlEvent.OnServerEvent:Connect(function(player, action, choice)
 	if action == "PlayBot" then
 		if playerSides[player.UserId] == "White" or not seatPlayers.White or seatPlayers.White == player.UserId then
 			botEnabled = true
+			playerSides[-1] = "Black"
 			seatPlayers.White = player.UserId
 			seatPlayers.Black = -1
 			playerSides[player.UserId] = "White"
