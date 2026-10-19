@@ -1,6 +1,7 @@
 -- YUGATNEO Chess: polished controls, move hints, and live status.
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local UserInputService = game:GetService("UserInputService")
 local player = Players.LocalPlayer
 local controlEvent = ReplicatedStorage:WaitForChild("ChessControlEvent")
 
@@ -508,4 +509,40 @@ controlEvent.OnClientEvent:Connect(function(action, payload, fromRow, fromCol)
 			end
 		end
 	end
+end)
+
+
+-- Reliable board input: raycast under the mouse and send only the target square.
+-- The server checks turn ownership, team quiz state, and full chess legality.
+local mouse = player:GetMouse()
+local lastBoardClick = 0
+UserInputService.InputBegan:Connect(function(input, gameProcessed)
+	if gameProcessed or input.UserInputType ~= Enum.UserInputType.MouseButton1 then return end
+	if not mouse.Target then return end
+	local target = mouse.Target
+	local row, col
+	local arena = workspace:FindFirstChild("YUGATNEO_ChessArena")
+	if not arena then return end
+
+	-- First resolve a square tile, then a part belonging to a chess piece model.
+	local current = target
+	while current and current ~= arena do
+		local r = current:GetAttribute("Row")
+		local c = current:GetAttribute("Col")
+		if r ~= nil and c ~= nil then
+			row, col = r, c
+			break
+		end
+		current = current.Parent
+	end
+	if not row or not col then return end
+	local board = arena:FindFirstChild("Board")
+	local pieces = arena:FindFirstChild("Pieces")
+	if not (board and target:IsDescendantOf(arena) and (target:IsDescendantOf(board) or (pieces and target:IsDescendantOf(pieces)))) then
+		return
+	end
+	local now = os.clock()
+	if now - lastBoardClick < 0.08 then return end
+	lastBoardClick = now
+	controlEvent:FireServer("BoardClick", { row = row, col = col })
 end)
