@@ -3,8 +3,8 @@
 This checklist is required before treating the prototype as tournament-ready. The current Roblox Studio project has not been automatically executed by these repository changes.
 
 ## Camera and input
-- [ ] Step onto `WhiteChessViewPad`; camera frames all 64 White-board squares and pieces.
-- [ ] Step onto `BlackChessViewPad`; camera frames all 64 Black-board squares and pieces.
+- [ ] Step onto `WhitePlayerField`; camera frames the single board from the White side.
+- [ ] Step onto `BlackPlayerField`; camera frames the same board from the Black side.
 - [ ] Camera remains stable while the avatar moves and while the character respawns.
 - [ ] `EXIT` restores the prior camera type, subject, field of view, and controls.
 - [ ] Mouse selection works from the oblique camera angle; clicking a legal destination moves the selected piece.
@@ -46,11 +46,13 @@ This checklist is required before treating the prototype as tournament-ready. Th
 - [ ] Test White team and Black team independently, including after check, captures, promotion, and game end.
 
 
-## Dual-board synchronization
+## One-board, two-player-field flow
 - [ ] Confirm exactly one board spawns with 32 pieces in the correct starting position.
-- [ ] Confirm green White and blue Black player fields spawn on opposite sides of the same board.
+- [ ] Confirm green White and blue Black player fields spawn on opposite sides of the same board, with White aligned to row 1 and Black aligned to row 8.
 - [ ] Walk onto White field; verify player is assigned White automatically.
+- [ ] While only White is occupied, click a piece and verify the server rejects the move and displays a waiting message.
 - [ ] With a second client, walk onto Black field; verify player is assigned Black and the match begins.
+- [ ] Verify the White player cannot move before the second player joins.
 - [ ] Verify a third client cannot claim an occupied side.
 - [ ] Verify the HUD does not claim both seats are occupied while both fields are empty.
 - [ ] On the single board, select a piece and move it; verify the same board updates correctly.
@@ -60,7 +62,7 @@ This checklist is required before treating the prototype as tournament-ready. Th
 - [ ] Confirm White and Black fields point the camera at the same board from opposite sides.
 
 ## Mouse input regression
-- [ ] In either board-view mode, click the visible body of a piece; the correct logical square is selected and both boards show matching highlights.
+- [ ] In either board-view mode, click the visible body of a piece; the correct logical square is selected and legal moves are highlighted on the single board.
 - [ ] Click a green destination square; the piece moves and turn/status updates.
 - [ ] Click the same piece twice to cancel selection.
 - [ ] Click an enemy piece on a legal capture square to capture it.
@@ -96,5 +98,6 @@ This checklist is required before treating the prototype as tournament-ready. Th
 ## Clean arena regression
 - [ ] Confirm the four watchtowers, fence rails, telescopes, target range, reaction pad, memory pads, computer desk, and phone booth no longer spawn.
 - [ ] Confirm one chessboard, status panel, compact floor, and both player fields remain; no second board is created.
+- [ ] Verify camera is on the negative-Z side for White and positive-Z side for Black.
 - [ ] Step onto the chess-view pad and use EXIT; confirm the original camera is restored.
 - [ ] Confirm no telescope-specific camera UI or actions remain.
