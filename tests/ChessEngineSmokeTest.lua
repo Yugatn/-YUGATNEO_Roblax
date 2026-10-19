@@ -33,4 +33,44 @@ assertEqual(ok, true, "White e-pawn double move is accepted")
 assertEqual(copy.turn, "Black", "turn changes after a legal move")
 assertEqual(initial.turn, "White", "copying state leaves original unchanged")
 
+
+local repetition = ChessEngine.newGame()
+local sequence = {
+	{1,2,3,3}, {8,2,6,3}, {3,3,1,2}, {6,3,8,2},
+	{1,2,3,3}, {8,2,6,3}, {3,3,1,2}, {6,3,8,2},
+}
+for index, move in ipairs(sequence) do
+	local moved, reason = ChessEngine.move(repetition, move[1], move[2], move[3], move[4], "Queen")
+	assert(moved, "Knight repetition move " .. index .. " rejected: " .. tostring(reason))
+end
+local repetitionStatus = ChessEngine.status(repetition)
+assertEqual(repetitionStatus.gameOver, true, "threefold repetition ends the game")
+assertEqual(repetitionStatus.drawReason, "threefold repetition", "threefold repetition reason")
+
+local fiftyMove = ChessEngine.newGame()
+for row = 1, 8 do for col = 1, 8 do fiftyMove.board[row][col] = nil end end
+fiftyMove.board[1][5] = { type = "King", side = "White", moved = true }
+fiftyMove.board[8][5] = { type = "King", side = "Black", moved = true }
+fiftyMove.board[1][1] = { type = "Rook", side = "White", moved = true }
+fiftyMove.castling.White.kingSide = false
+fiftyMove.castling.White.queenSide = false
+fiftyMove.castling.Black.kingSide = false
+fiftyMove.castling.Black.queenSide = false
+fiftyMove.halfMove = 100
+local fiftyStatus = ChessEngine.status(fiftyMove)
+assertEqual(fiftyStatus.drawReason, "fifty-move rule", "100 half-moves trigger the fifty-move draw")
+
+local insufficient = ChessEngine.newGame()
+for row = 1, 8 do for col = 1, 8 do insufficient.board[row][col] = nil end end
+insufficient.board[1][5] = { type = "King", side = "White", moved = true }
+insufficient.board[8][5] = { type = "King", side = "Black", moved = true }
+insufficient.board[2][3] = { type = "Bishop", side = "White", moved = true }
+insufficient.castling.White.kingSide = false
+insufficient.castling.White.queenSide = false
+insufficient.castling.Black.kingSide = false
+insufficient.castling.Black.queenSide = false
+insufficient.halfMove = 0
+local insufficientStatus = ChessEngine.status(insufficient)
+assertEqual(insufficientStatus.drawReason, "insufficient material", "king and bishop versus king is drawn")
+
 print("[ChessEngine PASS] All smoke tests passed.")
