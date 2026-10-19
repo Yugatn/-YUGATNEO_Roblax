@@ -67,8 +67,53 @@ local engineState = ChessEngine.newGame()
 local selectedPiece = nil
 local selectedTile = nil
 local pendingPromotion = nil
+local pendingPromotionUserId = nil
+local selectedByUserId = nil
 local gameOver = false
 local tryMove
+
+-- This prototype has one shared board. Only the two seated players may move:
+-- the first player is White, the second is Black; additional players spectate.
+local playerSides = {}
+local seatPlayers = { White = nil, Black = nil }
+local hostUserId = nil
+
+local function assignPlayer(player)
+	if playerSides[player.UserId] then return end
+	if not seatPlayers.White then
+		seatPlayers.White = player.UserId
+		playerSides[player.UserId] = "White"
+	elseif not seatPlayers.Black then
+		seatPlayers.Black = player.UserId
+	end
+	if playerSides[player.UserId] == "Black" then
+		seatPlayers.Black = player.UserId
+		playerSides[player.UserId] = "Black"
+	end
+	if not hostUserId then hostUserId = player.UserId end
+	controlEvent:FireClient(player, "SeatAssigned", playerSides[player.UserId] or "Spectator")
+end
+
+for _, player in ipairs(Players:GetPlayers()) do
+	assignPlayer(player)
+end
+Players.PlayerAdded:Connect(assignPlayer)
+Players.PlayerRemoving:Connect(function(player)
+	local side = playerSides[player.UserId]
+	if side and seatPlayers[side] == player.UserId then
+		seatPlayers[side] = nil
+		gameOver = true
+		pendingPromotion = nil
+		pendingPromotionUserId = nil
+		selectedPiece = nil
+		selectedByUserId = nil
+		setStatus(player.Name .. " left; match stopped. A new game requires two seated players.")
+	end
+	playerSides[player.UserId] = nil
+	if hostUserId == player.UserId then
+		hostUserId = seatPlayers.White or seatPlayers.Black
+	end
+end)
 
 local WHITE = Color3.fromRGB(238, 232, 218)
 local BLACK = Color3.fromRGB(65, 75, 91)
@@ -252,23 +297,26 @@ local function makePiece(pieceType, side, row, col)
 
 	local function onPieceClicked(player)
 		if gameOver or pendingPromotion then return end
+		if playerSides[player.UserId] ~= currentTurn then return end
 		local currentRow = model:GetAttribute("Row")
 		local currentCol = model:GetAttribute("Col")
 		if model.Parent and occupancy[key(currentRow, currentCol)] == model then
 			if model:GetAttribute("Side") == currentTurn then
 				if selectedPiece == model then
 					selectedPiece = nil
+					selectedByUserId = nil
 					controlEvent:FireAllClients("ClearHighlights")
 					setStatus(currentTurn .. " to move")
 				else
 					selectedPiece = model
+					selectedByUserId = player.UserId
 					local legal = ChessEngine.legalMoves(engineState, currentRow, currentCol)
 					controlEvent:FireAllClients("LegalMoves", legal, currentRow, currentCol)
 					setStatus(currentTurn .. " to move | Selected: " .. pieceType)
 				end
 			elseif selectedPiece then
 				-- Clicking an opposing piece attempts to capture it on its square.
-				tryMove(currentRow, currentCol)
+				tryMove(currentRow, currentCol, nil, player)
 			end
 		end
 	end
@@ -307,7 +355,7 @@ for row = 1, 8 do
 		click.Parent = tile
 		click.MouseClick:Connect(function(player)
 			if selectedPiece then
-				tryMove(row, col)
+				tryMove(row, col, nil, player)
 			end
 		end)
 	end
@@ -337,8 +385,10 @@ local function isValidMove(piece, toRow, toCol)
 	return false
 end
 
-tryMove = function(toRow, toCol, promotionChoice)
+tryMove = function(toRow, toCol, promotionChoice, player)
 	if gameOver then return end
+	if not player or playerSides[player.UserId] ~= currentTurn then return end
+	if selectedByUserId ~= player.UserId then return end
 	if pendingPromotion and not promotionChoice then return end
 	if not selectedPiece or not selectedPiece.Parent then
 		selectedPiece = nil
@@ -355,7 +405,8 @@ tryMove = function(toRow, toCol, promotionChoice)
 	local pieceType = piece:GetAttribute("PieceType")
 	if pieceType == "Pawn" and (toRow == 1 or toRow == 8) and not promotionChoice then
 		pendingPromotion = { row = toRow, col = toCol }
-		controlEvent:FireAllClients("PromotionRequired")
+		pendingPromotionUserId = player.UserId
+		controlEvent:FireClient(player, "PromotionRequired")
 		setStatus("Choose a piece for pawn promotion")
 		return
 	end
@@ -394,12 +445,14 @@ tryMove = function(toRow, toCol, promotionChoice)
 	piece:PivotTo(CFrame.new(squarePosition(toRow, toCol, PIECE_Y)) * CFrame.Angles(0, 0, math.rad(90)))
 	local promoted = pieceType == "Pawn" and (toRow == 1 or toRow == 8)
 	if promoted then
+		local promotedType = (promotionChoice == "Queen" or promotionChoice == "Rook" or promotionChoice == "Bishop" or promotionChoice == "Knight") and promotionChoice or "Queen"
 		piece:Destroy()
 		occupancy[key(toRow, toCol)] = nil
-		piece = makePiece("Queen", side, toRow, toCol)
+		piece = makePiece(promotedType, side, toRow, toCol)
 	end
 
 	selectedPiece = nil
+	selectedByUserId = nil
 	pendingPromotion = nil
 	controlEvent:FireAllClients("ClearHighlights")
 	currentTurn = engineState.turn
@@ -414,7 +467,9 @@ local function resetGame()
 	piecesFolder:ClearAllChildren()
 	table.clear(occupancy)
 	selectedPiece = nil
+	selectedByUserId = nil
 	pendingPromotion = nil
+	pendingPromotionUserId = nil
 	gameOver = false
 	currentTurn = "White"
 	engineState = ChessEngine.newGame()
@@ -429,16 +484,24 @@ end
 
 controlEvent.OnServerEvent:Connect(function(player, action, choice)
 	if action == "Promote" then
-		if pendingPromotion and selectedPiece then
+		if pendingPromotion and selectedPiece and pendingPromotionUserId == player.UserId and selectedByUserId == player.UserId then
 			local pending = pendingPromotion
 			pendingPromotion = nil
-			tryMove(pending.row, pending.col, choice)
+			pendingPromotionUserId = nil
+			tryMove(pending.row, pending.col, choice, player)
 		end
 	elseif action == "Reset" then
-		resetGame()
+		if player.UserId == hostUserId and seatPlayers.White and seatPlayers.Black then
+			resetGame()
+		else
+			controlEvent:FireClient(player, "Status", "Only the table host can reset, and two players must be seated.")
+		end
 	elseif action == "Deselect" then
+		if selectedByUserId ~= player.UserId then return end
 		selectedPiece = nil
+		selectedByUserId = nil
 		pendingPromotion = nil
+		pendingPromotionUserId = nil
 		controlEvent:FireAllClients("PromotionHide")
 		controlEvent:FireAllClients("ClearHighlights")
 		setStatus(currentTurn .. " to move")
