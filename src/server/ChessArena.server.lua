@@ -80,6 +80,7 @@ local tryMove
 local playerSides = {}
 local seatPlayers = { White = nil, Black = nil }
 local hostUserId = nil
+local lastBoardRequestAt = {}
 
 local teamMembers = { White = {}, Black = {} }
 local pendingTeamQuiz = nil
@@ -171,6 +172,7 @@ Players.PlayerRemoving:Connect(function(player)
 		pendingTeamQuiz.answered[player.UserId] = true
 	end
 	playerSides[player.UserId] = nil
+	lastBoardRequestAt[player.UserId] = nil
 	if hostUserId == player.UserId then
 		hostUserId = seatPlayers.White or seatPlayers.Black
 	end
@@ -558,9 +560,27 @@ end
 controlEvent.OnServerEvent:Connect(function(player, action, choice)
 	if action == "BoardClick" then
 		if typeof(choice) ~= "table" then return end
+		local now = os.clock()
+		if now - (lastBoardRequestAt[player.UserId] or 0) < 0.04 then return end
+		lastBoardRequestAt[player.UserId] = now
+
 		local row, col = tonumber(choice.row), tonumber(choice.col)
-		if not row or not col or row % 1 ~= 0 or col % 1 ~= 0 or not inside(row, col) then return end
-		if gameOver or pendingPromotion or playerSides[player.UserId] ~= currentTurn then return end
+		if not row or not col or row % 1 ~= 0 or col % 1 ~= 0 or not inside(row, col) then
+			controlEvent:FireClient(player, "Status", "Invalid board square. Click a visible square.")
+			return
+		end
+		if gameOver then
+			controlEvent:FireClient(player, "Status", "This game has ended. Start a new game to continue.")
+			return
+		end
+		if pendingPromotion then
+			controlEvent:FireClient(player, "Status", "Choose a promotion piece first.")
+			return
+		end
+		if playerSides[player.UserId] ~= currentTurn then
+			controlEvent:FireClient(player, "Status", "It is " .. currentTurn .. "'s turn. You are " .. tostring(playerSides[player.UserId] or "a spectator") .. ".")
+			return
+		end
 		local targetPiece = occupancy[key(row, col)]
 		if targetPiece and targetPiece:GetAttribute("Side") == currentTurn then
 			if selectedPiece == targetPiece and selectedByUserId == player.UserId then
