@@ -151,9 +151,15 @@ end
 readyBtn.Activated:Connect(function()
 	event:FireServer("Ready", true)
 end)
+
 cancelBtn.Activated:Connect(function()
-	event:FireServer("Cancel")
+	if cancelBtn.Text == "CLEAR TABLE" then
+		event:FireServer("ClearFinished")
+	else
+		event:FireServer("Cancel")
+	end
 end)
+
 resignBtn.Activated:Connect(function()
 	event:FireServer("Resign")
 end)
@@ -168,6 +174,7 @@ event.OnClientEvent:Connect(function(action, tableId, payload, extra)
 		resignBtn.Visible = false
 		readyBtn.Visible = true
 		cancelBtn.Visible = true
+		cancelBtn.Text = "LEAVE TABLE"
 	elseif action == "Lobby" or action == "TableState" then
 		if tableId and myTableId and tableId ~= myTableId then return end
 		local st = payload
@@ -180,15 +187,15 @@ event.OnClientEvent:Connect(function(action, tableId, payload, extra)
 			local playing = st.state == "Playing"
 			resignBtn.Visible = playing
 			readyBtn.Visible = st.state == "Ready" or st.state == "Waiting"
-			cancelBtn.Visible = st.state == "Ready" or st.state == "Waiting"
 			if st.state == "Finished" then
 				cancelBtn.Text = "CLEAR TABLE"
 				cancelBtn.Visible = true
-				cancelBtn.Activated:Connect(function()
-					event:FireServer("ClearFinished")
-				end)
-			else
+				readyBtn.Visible = false
+			elseif st.state == "Ready" or st.state == "Waiting" then
 				cancelBtn.Text = "LEAVE TABLE"
+				cancelBtn.Visible = true
+			else
+				cancelBtn.Visible = false
 			end
 		end
 	elseif action == "MatchStarted" then
@@ -212,6 +219,7 @@ event.OnClientEvent:Connect(function(action, tableId, payload, extra)
 		statusLabel.Text = "Left table. Walk to a Join Pad to play again."
 		readyBtn.Visible = true
 		cancelBtn.Visible = true
+		cancelBtn.Text = "LEAVE TABLE"
 		resignBtn.Visible = false
 	elseif action == "Status" then
 		if type(payload) == "string" then
@@ -225,10 +233,10 @@ event.OnClientEvent:Connect(function(action, tableId, payload, extra)
 		local fromRow = extra and extra.fromRow
 		local fromCol = extra and extra.fromCol
 		if fromRow and fromCol then
-			local origin = board:FindFirstChild("Square_" .. fromRow .. "_" .. fromCol)
-			if origin then
-				highlighted[origin] = origin.Color
-				origin.Color = COLORS.gold
+			local originTile = board:FindFirstChild("Square_" .. fromRow .. "_" .. fromCol)
+			if originTile then
+				highlighted[originTile] = originTile.Color
+				originTile.Color = COLORS.gold
 			end
 		end
 		for _, move in ipairs(payload or {}) do
@@ -246,16 +254,6 @@ event.OnClientEvent:Connect(function(action, tableId, payload, extra)
 		promotionPanel.Visible = false
 	elseif action == "Error" then
 		statusLabel.Text = "Error: " .. tostring(payload)
-	end
-end)
-
--- ClearFinished via cancel when finished — handled by reconnecting button above; also support direct:
-local clearBound = false
-cancelBtn.Activated:Connect(function()
-	if cancelBtn.Text == "CLEAR TABLE" then
-		event:FireServer("ClearFinished")
-	else
-		event:FireServer("Cancel")
 	end
 end)
 
