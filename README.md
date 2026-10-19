@@ -40,7 +40,7 @@ A Roblox Studio chess game prototype for the YUGATNEO world. This branch adds tw
 - Removed the four watchtowers, perimeter fence and decorative rails, telescopes, target range, reaction-time pad, memory challenge, computer desk, phone booth, and character sunglasses/beard styling. These features were unrelated to chess and made the play area visually crowded.
 - The environment now consists of two synchronized chessboards, their pieces, the status panel, a compact 120×80 floor, and separate White/Black pads for overhead chess views.
 - The camera overlay is now chess-only; telescope camera actions and labels were removed.
-- The floor was reduced to 80×80 studs so the arena reads as a compact chess area rather than a large courtyard.
+- The floor is 120×80 studs to fit the two chessboards side by side without bringing back unrelated scenery.
 
 ## Input reliability and engine checks
 
