@@ -51,7 +51,7 @@ This work is isolated on `feature/chess-topdown-interaction`; `main` remains unc
 
 ```bash
 git fetch origin
-git switch feature/chess-topdown-interaction
+git switch feature/team-chess-quiz-captain
 git pull
 ```
 
