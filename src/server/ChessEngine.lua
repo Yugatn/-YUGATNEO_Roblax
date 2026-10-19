@@ -1,10 +1,15 @@
 -- YUGATNEO Chess Engine — pure Luau rules (no Roblox Instances).
--- Board rows 1..8: White home rank to Black home rank.
+-- Includes check/mate/stalemate, castling, en passant, promotion,
+-- fifty-move rule (automatic at 100 half-moves), and threefold repetition.
 
 local ChessEngine = {}
 
 local FILES = 8
 local PROMOTIONS = { Queen = true, Rook = true, Bishop = true, Knight = true }
+local PIECE_CODE = {
+	White = { Pawn = "P", Rook = "R", Knight = "N", Bishop = "B", Queen = "Q", King = "K" },
+	Black = { Pawn = "p", Rook = "r", Knight = "n", Bishop = "b", Queen = "q", King = "k" },
+}
 
 local function inside(row, col)
 	return row >= 1 and row <= FILES and col >= 1 and col <= FILES
@@ -12,6 +17,30 @@ end
 
 local function other(side)
 	return side == "White" and "Black" or "White"
+end
+
+function ChessEngine.positionKey(state)
+	local parts = {}
+	for row = 1, 8 do
+		for col = 1, 8 do
+			local p = state.board[row][col]
+			if p then
+				table.insert(parts, PIECE_CODE[p.side][p.type])
+			else
+				table.insert(parts, ".")
+			end
+		end
+	end
+	table.insert(parts, state.turn == "White" and "w" or "b")
+	local c = state.castling
+	table.insert(parts, (c.White.kingSide and "K" or "") .. (c.White.queenSide and "Q" or "")
+		.. (c.Black.kingSide and "k" or "") .. (c.Black.queenSide and "q" or "") .. "-")
+	if state.enPassant then
+		table.insert(parts, state.enPassant.row .. state.enPassant.col)
+	else
+		table.insert(parts, "-")
+	end
+	return table.concat(parts)
 end
 
 local function cloneState(state)
@@ -25,12 +54,18 @@ local function cloneState(state)
 		},
 		halfMove = state.halfMove or 0,
 		fullMove = state.fullMove or 1,
+		positionHistory = {},
 	}
 	for row = 1, 8 do
 		copy.board[row] = {}
 		for col = 1, 8 do
 			local p = state.board[row][col]
 			copy.board[row][col] = p and { type = p.type, side = p.side, moved = p.moved } or nil
+		end
+	end
+	if state.positionHistory then
+		for i, key in ipairs(state.positionHistory) do
+			copy.positionHistory[i] = key
 		end
 	end
 	return copy
@@ -76,6 +111,7 @@ function ChessEngine.newGame()
 		},
 		halfMove = 0,
 		fullMove = 1,
+		positionHistory = {},
 	}
 	for row = 1, 8 do
 		state.board[row] = {}
@@ -87,6 +123,7 @@ function ChessEngine.newGame()
 		state.board[7][col] = { type = "Pawn", side = "Black", moved = false }
 		state.board[8][col] = { type = back[col], side = "Black", moved = false }
 	end
+	table.insert(state.positionHistory, ChessEngine.positionKey(state))
 	return state
 end
 
@@ -343,6 +380,16 @@ function ChessEngine.legalMoves(state, row, col)
 	return legal
 end
 
+local function countKey(history, key)
+	local n = 0
+	for _, k in ipairs(history) do
+		if k == key then
+			n += 1
+		end
+	end
+	return n
+end
+
 function ChessEngine.move(state, fromRow, fromCol, toRow, toCol, promotion)
 	if not inside(fromRow, fromCol) or not inside(toRow, toCol) then
 		return false, "Invalid square"
@@ -368,6 +415,14 @@ function ChessEngine.move(state, fromRow, fromCol, toRow, toCol, promotion)
 		return false, "Choose Queen, Rook, Bishop, or Knight for promotion"
 	end
 	local captured = applyMoveUnchecked(state, fromRow, fromCol, chosen, promotion)
+	if not state.positionHistory then
+		state.positionHistory = {}
+	end
+	-- After capture/pawn move, repetition history can be cleared for practicality
+	if state.halfMove == 0 then
+		state.positionHistory = {}
+	end
+	table.insert(state.positionHistory, ChessEngine.positionKey(state))
 	return true, ChessEngine.status(state), captured, chosen
 end
 
@@ -398,6 +453,35 @@ function ChessEngine.status(state)
 	local side = state.turn
 	local check = ChessEngine.inCheck(state, side)
 	local moves = ChessEngine.allLegalMoves(state, side)
+
+	-- Fifty-move rule: 100 half-moves without capture or pawn move
+	if (state.halfMove or 0) >= 100 then
+		return {
+			text = "Draw — fifty-move rule",
+			check = check,
+			checkmate = false,
+			stalemate = false,
+			fiftyMove = true,
+			threefold = false,
+			gameOver = true,
+		}
+	end
+
+	-- Threefold repetition
+	local history = state.positionHistory or {}
+	local key = ChessEngine.positionKey(state)
+	if countKey(history, key) >= 3 then
+		return {
+			text = "Draw — threefold repetition",
+			check = check,
+			checkmate = false,
+			stalemate = false,
+			fiftyMove = false,
+			threefold = true,
+			gameOver = true,
+		}
+	end
+
 	if #moves == 0 then
 		if check then
 			return {
