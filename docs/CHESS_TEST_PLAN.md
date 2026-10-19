@@ -3,7 +3,8 @@
 This checklist is required before treating the prototype as tournament-ready. The current Roblox Studio project has not been automatically executed by these repository changes.
 
 ## Camera and input
-- [ ] Step onto `ChessTopDownViewPad`; camera frames all 64 squares and all pieces.
+- [ ] Step onto `WhiteChessViewPad`; camera frames all 64 White-board squares and pieces.
+- [ ] Step onto `BlackChessViewPad`; camera frames all 64 Black-board squares and pieces.
 - [ ] Camera remains stable while the avatar moves and while the character respawns.
 - [ ] `EXIT` restores the prior camera type, subject, field of view, and controls.
 - [ ] Mouse selection works from the oblique camera angle; clicking a legal destination moves the selected piece.
@@ -22,13 +23,13 @@ This checklist is required before treating the prototype as tournament-ready. Th
 - [ ] Reject a client move when it is not that player's turn or the player is not assigned to that side.
 
 ## Bot practice
-- [ ] Pressing `PLAY VS BOT` starts a fresh game and visibly confirms White is the human side.
+- [ ] Pressing `PLAY VS BOT` starts a fresh game, reserves Black for the bot, and automatically enters White board view.
 - [ ] The human can make a legal White move and the bot makes one legal Black reply.
 - [ ] The bot never moves twice, never moves after game over, and never acts on behalf of a human seat.
 - [ ] Reset starts a fresh position and clears selection, promotion UI, and highlights.
 
 ## Known scope gaps
-- One shared board is still used by everyone in a server. Independent table IDs, separate match state, queue/matchmaking, reconnect/requeue, persistent ratings, repetition draws, the fifty-move rule, and insufficient-material draws are not implemented.
+- Two physical boards show one shared match. Independent table IDs, separate match state, queue/matchmaking, reconnect/requeue, and persistent ratings are not implemented.
 - Run these tests with two Roblox Studio clients (Start Server + 2 Players) as well as a single client before publishing.
 
 
@@ -45,13 +46,21 @@ This checklist is required before treating the prototype as tournament-ready. Th
 - [ ] Test White team and Black team independently, including after check, captures, promotion, and game end.
 
 
+## Dual-board synchronization
+- [ ] Confirm both boards spawn with 32 pieces and correct starting positions.
+- [ ] On the White board, select a piece and move it; verify the corresponding piece changes on the Black board.
+- [ ] Repeat a capture, castling move, en-passant capture, and promotion; verify both boards remain identical.
+- [ ] Reset the game; verify both boards return to the starting position.
+- [ ] With two Studio clients, verify the first is assigned White and the second Black, and each can play only on their own turn.
+- [ ] Confirm White and Black view pads point at the correct board from opposite sides.
+
 ## Mouse input regression
-- [ ] In top-down camera mode, click the visible upper body of a White piece; it is selected and the origin square turns gold.
+- [ ] In either board-view mode, click the visible body of a piece; the correct logical square is selected and both boards show matching highlights.
 - [ ] Click a green destination square; the piece moves and turn/status updates.
 - [ ] Click the same piece twice to cancel selection.
 - [ ] Click an enemy piece on a legal capture square to capture it.
 - [ ] Click a piece while too far away to trigger any ClickDetector; selection still works from the top-down board view.
-- [ ] Click outside the board (desk, computer, phone booth, world props); no chess selection or move occurs.
+- [ ] Click outside both boards; no chess selection or move occurs.
 - [ ] Send malformed row/column values through a client test; server rejects them without changing state.
 
 ## Automated engine smoke test
@@ -61,11 +70,11 @@ This checklist is required before treating the prototype as tournament-ready. Th
 - [ ] Remove the temporary test Script after the run.
 
 ## Raycast interaction
-- [ ] Enter the Chess Board view, click the upper visible surface of a piece, and verify the origin square turns gold and legal destinations turn green.
+- [ ] Enter either Chess Board view, click a piece, and verify the origin square turns gold and legal destinations turn green on both boards.
 - [ ] Click a green square; verify the piece moves, turn changes, and the bot replies in bot mode.
 - [ ] Click the board while it is the opponent's turn; the player receives a clear status message rather than a silent failure.
-- [ ] Click the computer monitor, phone booth, avatar, and empty world; none should be treated as a chess square.
-- [ ] Test on a wide desktop viewport and a narrow viewport to check screen-coordinate raycasting.
+- [ ] Click the avatar and empty world; neither should be treated as a chess square.
+- [ ] Test on wide and narrow viewports to check ray-plane square mapping.
 
 
 ## Draw rules regression
@@ -81,6 +90,6 @@ This checklist is required before treating the prototype as tournament-ready. Th
 
 ## Clean arena regression
 - [ ] Confirm the four watchtowers, fence rails, telescopes, target range, reaction pad, memory pads, computer desk, and phone booth no longer spawn.
-- [ ] Confirm the chessboard, status panel, compact floor, and green chess-view pad remain.
+- [ ] Confirm both chessboards, status panel, compact floor, and both chess-view pads remain.
 - [ ] Step onto the chess-view pad and use EXIT; confirm the original camera is restored.
 - [ ] Confirm no telescope-specific camera UI or actions remain.
