@@ -44,8 +44,22 @@ for index, move in ipairs(sequence) do
 	assert(moved, "Knight repetition move " .. index .. " rejected: " .. tostring(reason))
 end
 local repetitionStatus = ChessEngine.status(repetition)
-assertEqual(repetitionStatus.gameOver, true, "threefold repetition ends the game")
-assertEqual(repetitionStatus.drawReason, "threefold repetition", "threefold repetition reason")
+assertEqual(repetitionStatus.gameOver, false, "threefold repetition is claimable, not automatic")
+assertEqual(repetitionStatus.canClaimThreefold, true, "threefold repetition exposes a draw claim")
+
+local fivefold = ChessEngine.newGame()
+for index, move in ipairs({
+	{1,2,3,3}, {8,2,6,3}, {3,3,1,2}, {6,3,8,2},
+	{1,2,3,3}, {8,2,6,3}, {3,3,1,2}, {6,3,8,2},
+	{1,2,3,3}, {8,2,6,3}, {3,3,1,2}, {6,3,8,2},
+	{1,2,3,3}, {8,2,6,3}, {3,3,1,2}, {6,3,8,2},
+}) do
+	local moved, reason = ChessEngine.move(fivefold, move[1], move[2], move[3], move[4], "Queen")
+	assert(moved, "Fivefold repetition move " .. index .. " rejected: " .. tostring(reason))
+end
+local fivefoldStatus = ChessEngine.status(fivefold)
+assertEqual(fivefoldStatus.gameOver, true, "fivefold repetition ends the game automatically")
+assertEqual(fivefoldStatus.drawReason, "fivefold repetition", "fivefold repetition reason")
 
 local fiftyMove = ChessEngine.newGame()
 for row = 1, 8 do for col = 1, 8 do fiftyMove.board[row][col] = nil end end
@@ -58,7 +72,11 @@ fiftyMove.castling.Black.kingSide = false
 fiftyMove.castling.Black.queenSide = false
 fiftyMove.halfMove = 100
 local fiftyStatus = ChessEngine.status(fiftyMove)
-assertEqual(fiftyStatus.drawReason, "fifty-move rule", "100 half-moves trigger the fifty-move draw")
+assertEqual(fiftyStatus.gameOver, false, "fifty-move draw is claimable, not automatic")
+assertEqual(fiftyStatus.canClaimFiftyMove, true, "100 half-moves enable a draw claim")
+fiftyMove.halfMove = 150
+local seventyFiveStatus = ChessEngine.status(fiftyMove)
+assertEqual(seventyFiveStatus.drawReason, "seventy-five-move rule", "150 half-moves trigger automatic draw")
 
 local insufficient = ChessEngine.newGame()
 for row = 1, 8 do for col = 1, 8 do insufficient.board[row][col] = nil end end
