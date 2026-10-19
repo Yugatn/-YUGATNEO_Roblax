@@ -51,6 +51,13 @@ A Roblox Studio chess game prototype for the YUGATNEO world. This branch adds a 
 - A manual engine smoke-test harness is available at [`tests/ChessEngineSmokeTest.lua`](tests/ChessEngineSmokeTest.lua). Copy it into a temporary Script under `ServerScriptService` and run Play; it checks standard starting-position perft counts at depths 1–3 (20, 400, 8902). Remove the temporary Script after testing.
 - These changes have not been executed in Roblox Studio in this environment. Treat the smoke-test file as a test harness to run, not as evidence that the tests have passed.
 
+## Draw rules
+
+- Threefold repetition and the fifty-move rule are **claimable** draws, not automatic game endings. The current player can use **CLAIM DRAW** when the current position meets either condition.
+- Fivefold repetition and the seventy-five-move rule end the game automatically. Checkmate/stalemate are evaluated before these draw counters.
+- The engine also detects clear insufficient-material cases: king versus king, king + one bishop/knight versus king, and bishops-only positions where every bishop is on the same square color.
+- These rules have a manual regression harness in `tests/ChessEngineSmokeTest.lua`. They are not yet verified in a live Roblox Studio session. Position-repetition keying still needs dedicated en-passant edge-case tests before tournament use.
+
 ## Run in Roblox Studio
 
 1. Open this repository folder on your Mac.
