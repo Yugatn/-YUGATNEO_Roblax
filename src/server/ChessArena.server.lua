@@ -27,9 +27,15 @@ local piecesFolder = Instance.new("Folder")
 piecesFolder.Name = "Pieces"
 piecesFolder.Parent = arena
 
-local controlEvent = Instance.new("RemoteEvent")
-controlEvent.Name = "ChessControlEvent"
-controlEvent.Parent = game:GetService("ReplicatedStorage")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+-- Reuse the event during Rojo hot reloads so the client and server never talk
+-- through two different RemoteEvent instances with the same name.
+local controlEvent = ReplicatedStorage:FindFirstChild("ChessControlEvent")
+if not controlEvent then
+	controlEvent = Instance.new("RemoteEvent")
+	controlEvent.Name = "ChessControlEvent"
+	controlEvent.Parent = ReplicatedStorage
+end
 
 local statusPart = Instance.new("Part")
 statusPart.Name = "GameStatusBoard"
@@ -635,29 +641,34 @@ controlEvent.OnServerEvent:Connect(function(player, action, choice)
 			end
 		end
 	elseif action == "JoinTeam" then
-		-- Legacy HUD buttons use the same side-claim path as the physical fields.
 		local side = choice
-		if side == "White" or side == "Black" then
-			if playerSides[player.UserId] then
-				controlEvent:FireClient(player, "Status", "You already joined the " .. playerSides[player.UserId] .. " side.")
-			elseif botEnabled and side == "Black" then
-				controlEvent:FireClient(player, "Status", "Black is controlled by the bot in this practice game.")
-			elseif seatPlayers[side] and seatPlayers[side] ~= player.UserId then
-				controlEvent:FireClient(player, "Status", side .. " field is occupied.")
-			else
-				playerSides[player.UserId] = side
-				teamMembers[side][player.UserId] = true
-				seatPlayers[side] = seatPlayers[side] or player.UserId
-				hostUserId = hostUserId or player.UserId
-				controlEvent:FireClient(player, "SeatAssigned", side)
-				if seatPlayers.White and seatPlayers.Black then
-					botEnabled = false
-					resetGame()
-					setStatus("Both players ready — White to move")
-				else
-					setStatus(side .. " player joined. Waiting for the other side.")
-				end
-			end
+		if side ~= "White" and side ~= "Black" then return end
+		if playerSides[player.UserId] then
+			controlEvent:FireClient(player, "Status", "You already joined the " .. playerSides[player.UserId] .. " side.")
+			return
+		end
+		if botEnabled and side == "Black" then
+			controlEvent:FireClient(player, "Status", "Black is controlled by the bot in this practice game.")
+			return
+		end
+		if memberCount(side) >= 3 then
+			controlEvent:FireClient(player, "Status", side .. " team is full (maximum 3 players).")
+			return
+		end
+		playerSides[player.UserId] = side
+		teamMembers[side][player.UserId] = true
+		seatPlayers[side] = seatPlayers[side] or player.UserId
+		hostUserId = hostUserId or player.UserId
+		controlEvent:FireClient(player, "SeatAssigned", side)
+		for _, teammate in ipairs(sideMembers(side)) do
+			controlEvent:FireClient(teammate, "Status", side .. " team: " .. memberCount(side) .. "/3 players")
+		end
+		if seatPlayers.White and seatPlayers.Black and not matchStarted then
+			botEnabled = false
+			resetGame()
+			setStatus("Both sides ready — White to move")
+		elseif not seatPlayers[side == "White" and "Black" or "White"] then
+			setStatus(side .. " team joined. Waiting for the other side.")
 		end
 	elseif action == "TeamAnswer" then
 		local quiz = pendingTeamQuiz
@@ -847,6 +858,10 @@ local function connectViewField(field, side)
 		viewCooldown[player.UserId] = true
 		if not playerSides[player.UserId] then
 			claimSide(player, side)
+		elseif playerSides[player.UserId] ~= side then
+			controlEvent:FireClient(player, "Status", "You are on the " .. playerSides[player.UserId] .. " side. Use EXIT to leave this view.")
+			task.delay(2, function() viewCooldown[player.UserId] = nil end)
+			return
 		end
 		controlEvent:FireClient(player, "ChessView", { center = Vector3.new(0, 1, 0), side = side })
 		task.delay(2, function() viewCooldown[player.UserId] = nil end)
