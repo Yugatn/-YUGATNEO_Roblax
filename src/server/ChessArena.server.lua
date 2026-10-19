@@ -9,7 +9,6 @@ local BOARD_Y = 1
 local PIECE_Y = BOARD_Y + 0.18
 local ORIGIN = Vector3.new(-16, BOARD_Y, -16)
 local BOARD_NAME = "YUGATNEO_ChessArena"
-local syncSecondBoard
 
 local old = workspace:FindFirstChild(BOARD_NAME)
 if old then
@@ -624,26 +623,29 @@ controlEvent.OnServerEvent:Connect(function(player, action, choice)
 			end
 		end
 	elseif action == "JoinTeam" then
+		-- Legacy HUD buttons use the same side-claim path as the physical fields.
 		local side = choice
-		if side ~= "White" and side ~= "Black" then return end
-		if botEnabled and side == "Black" then
-			controlEvent:FireClient(player, "Status", "Black is controlled by the bot in this practice game.")
-			return
-		end
-		if playerSides[player.UserId] then
-			controlEvent:FireClient(player, "Status", "You are already on the " .. playerSides[player.UserId] .. " team.")
-			return
-		end
-		if memberCount(side) >= 3 then
-			controlEvent:FireClient(player, "Status", side .. " team is full (maximum 3 players).")
-			return
-		end
-		playerSides[player.UserId] = side
-		teamMembers[side][player.UserId] = true
-		if not seatPlayers[side] then seatPlayers[side] = player.UserId end
-		controlEvent:FireClient(player, "SeatAssigned", side)
-		for _, teammate in ipairs(sideMembers(side)) do
-			controlEvent:FireClient(teammate, "Status", side .. " team: " .. memberCount(side) .. "/3 players")
+		if side == "White" or side == "Black" then
+			if playerSides[player.UserId] then
+				controlEvent:FireClient(player, "Status", "You already joined the " .. playerSides[player.UserId] .. " side.")
+			elseif botEnabled and side == "Black" then
+				controlEvent:FireClient(player, "Status", "Black is controlled by the bot in this practice game.")
+			elseif seatPlayers[side] and seatPlayers[side] ~= player.UserId then
+				controlEvent:FireClient(player, "Status", side .. " field is occupied.")
+			else
+				playerSides[player.UserId] = side
+				teamMembers[side][player.UserId] = true
+				seatPlayers[side] = seatPlayers[side] or player.UserId
+				hostUserId = hostUserId or player.UserId
+				controlEvent:FireClient(player, "SeatAssigned", side)
+				if seatPlayers.White and seatPlayers.Black then
+					botEnabled = false
+					resetGame()
+					setStatus("Both players ready — White to move")
+				else
+					setStatus(side .. " player joined. Waiting for the other side.")
+				end
+			end
 		end
 	elseif action == "TeamAnswer" then
 		local quiz = pendingTeamQuiz
@@ -797,10 +799,6 @@ local function makePlayerField(name, side, position, color)
 	prompt.MaxActivationDistance = 12
 	prompt.RequiresLineOfSight = false
 	prompt.Parent = field
-	prompt.Triggered:Connect(function(player)
-		controlEvent:FireClient(player, "Status", "Joining " .. side .. " side...")
-		controlEvent:FireServer -- no client call here; server joins directly below
-	end)
 	return field, prompt
 end
 local whiteField, whitePrompt = makePlayerField("WhitePlayerField", "White", Vector3.new(0, 0.35, 24), Color3.fromRGB(64, 170, 125))
