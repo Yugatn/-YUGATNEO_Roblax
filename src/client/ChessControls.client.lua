@@ -205,6 +205,48 @@ resetButton.Activated:Connect(function()
 	controlEvent:FireServer("Reset")
 end)
 
+local promotionPanel = Instance.new("Frame")
+promotionPanel.Name = "PromotionChoice"
+promotionPanel.AnchorPoint = Vector2.new(0.5, 0.5)
+promotionPanel.Position = UDim2.fromScale(0.5, 0.5)
+promotionPanel.Size = UDim2.new(0, 330, 0, 116)
+promotionPanel.BackgroundColor3 = COLORS.panel
+promotionPanel.BorderSizePixel = 0
+promotionPanel.Visible = false
+promotionPanel.Parent = gui
+round(promotionPanel, 14)
+stroke(promotionPanel, COLORS.gold, 0.15)
+
+local promotionTitle = Instance.new("TextLabel")
+promotionTitle.Position = UDim2.new(0, 12, 0, 8)
+promotionTitle.Size = UDim2.new(1, -24, 0, 25)
+promotionTitle.BackgroundTransparency = 1
+promotionTitle.Text = "PROMOTE YOUR PAWN"
+promotionTitle.TextColor3 = COLORS.gold
+promotionTitle.Font = Enum.Font.GothamBlack
+promotionTitle.TextSize = 15
+promotionTitle.Parent = promotionPanel
+
+for index, choice in ipairs({ { "Queen", "♛  QUEEN" }, { "Rook", "♜  ROOK" }, { "Bishop", "♝  BISHOP" }, { "Knight", "♞  KNIGHT" } }) do
+	local button = Instance.new("TextButton")
+	button.Name = choice[1] .. "Promotion"
+	button.Position = UDim2.new(0, 12 + (index - 1) * 79, 0, 48)
+	button.Size = UDim2.new(0, 72, 0, 48)
+	button.BackgroundColor3 = COLORS.panel2
+	button.BorderSizePixel = 0
+	button.Text = choice[2]
+	button.TextColor3 = COLORS.text
+	button.Font = Enum.Font.GothamBold
+	button.TextSize = 10
+	button.TextWrapped = true
+	button.Parent = promotionPanel
+	round(button, 8)
+	button.Activated:Connect(function()
+		promotionPanel.Visible = false
+		controlEvent:FireServer("Promote", choice[1])
+	end)
+end
+
 local highlighted = {}
 local function restoreHighlights()
 	for tile, original in pairs(highlighted) do
@@ -218,7 +260,11 @@ local function getTileColor(row, col)
 end
 
 controlEvent.OnClientEvent:Connect(function(action, payload, fromRow, fromCol)
-	if action == "Status" then
+	if action == "PromotionRequired" then
+		promotionPanel.Visible = true
+	elseif action == "PromotionHide" then
+		promotionPanel.Visible = false
+	elseif action == "Status" then
 		statusLabel.Text = tostring(payload)
 		if string.find(string.lower(tostring(payload)), "checkmate") or string.find(string.lower(tostring(payload)), "stalemate") then
 			statusDot.BackgroundColor3 = COLORS.red
