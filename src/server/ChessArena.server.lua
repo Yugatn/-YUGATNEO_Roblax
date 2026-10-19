@@ -27,6 +27,10 @@ local piecesFolder = Instance.new("Folder")
 piecesFolder.Name = "Pieces"
 piecesFolder.Parent = arena
 
+local controlEvent = Instance.new("RemoteEvent")
+controlEvent.Name = "ChessControlEvent"
+controlEvent.Parent = game:GetService("ReplicatedStorage")
+
 local statusPart = Instance.new("Part")
 statusPart.Name = "GameStatusBoard"
 statusPart.Anchored = true
@@ -149,11 +153,13 @@ local function makePiece(pieceType, side, row, col)
 		return p
 	end
 
+	-- Stronger silhouettes: a broad foot, tapered-looking body, and type-specific top.
 	cylinder("Collar", 1.02, 0.25, 0.82, accent)
-	cylinder("Body", 0.78, 0.72, 1.25, color)
+	cylinder("Body", 0.72, 0.82, 1.25, color)
 
 	if pieceType == "Pawn" then
-		ball("Head", 0.68, 1.82, color)
+		cylinder("Neck", 0.48, 0.28, 1.72, color)
+		ball("Head", 0.62, 1.98, color)
 	elseif pieceType == "Rook" then
 		cylinder("Tower", 0.95, 0.55, 1.82, color)
 		for i = 1, 4 do
@@ -185,10 +191,19 @@ local function makePiece(pieceType, side, row, col)
 		ear.Position = squarePosition(row, col, PIECE_Y + 2.48)
 		ear.Parent = model
 	elseif pieceType == "Bishop" then
-		ball("Mitre", 0.58, 1.92, color)
-		ball("Tip", 0.2, 2.32, accent)
+		cylinder("MitreBase", 0.72, 0.24, 1.78, color)
+		local mitre = Instance.new("Part")
+		mitre.Name = "PointedMitre"
+		mitre.Shape = Enum.PartType.Ball
+		mitre.Size = Vector3.new(0.54, 0.72, 0.54)
+		mitre.Anchored = true
+		mitre.CanCollide = false
+		mitre.Color = color
+		mitre.Position = squarePosition(row, col, PIECE_Y + 2.05)
+		mitre.Parent = model
+		ball("MitreTip", 0.18, 2.42, accent)
 	elseif pieceType == "Queen" then
-		cylinder("Crown", 1.02, 0.28, 1.85, color)
+		cylinder("Crown", 1.02, 0.28, 1.88, color)
 		for i = 1, 5 do
 			local angle = (i - 1) * (2 * math.pi / 5)
 			local point = Instance.new("Part")
@@ -202,10 +217,31 @@ local function makePiece(pieceType, side, row, col)
 			point.Parent = model
 		end
 	elseif pieceType == "King" then
-		cylinder("Crown", 0.9, 0.3, 1.88, color)
-		addPart(model, "CrossVertical", Vector3.new(0.18, 0.72, 0.18), Vector3.new(0, 2.3, 0), accent)
-		addPart(model, "CrossHorizontal", Vector3.new(0.5, 0.16, 0.16), Vector3.new(0, 2.35, 0), accent)
+		cylinder("RoyalCrown", 0.9, 0.3, 1.88, color)
+		addPart(model, "CrossVertical", Vector3.new(0.18, 0.72, 0.18), Vector3.new(0, 2.42, 0), accent)
+		addPart(model, "CrossHorizontal", Vector3.new(0.5, 0.16, 0.16), Vector3.new(0, 2.47, 0), accent)
 	end
+
+	-- A readable letter badge makes the piece type obvious from the camera.
+	local badge = Instance.new("BillboardGui")
+	badge.Name = "PieceBadge"
+	badge.Size = UDim2.fromOffset(38, 38)
+	badge.StudsOffset = Vector3.new(0, 3.0, 0)
+	badge.AlwaysOnTop = true
+	badge.MaxDistance = 120
+	badge.Parent = base
+	local badgeText = Instance.new("TextLabel")
+	badgeText.Size = UDim2.fromScale(1, 1)
+	badgeText.BackgroundColor3 = side == "White" and Color3.fromRGB(30, 35, 45) or Color3.fromRGB(245, 240, 225)
+	badgeText.BackgroundTransparency = 0.1
+	badgeText.TextColor3 = side == "White" and Color3.fromRGB(255, 255, 255) or Color3.fromRGB(20, 25, 35)
+	badgeText.Font = Enum.Font.GothamBlack
+	badgeText.TextScaled = true
+	badgeText.Text = ({Pawn="P", Rook="R", Knight="N", Bishop="B", Queen="Q", King="K"})[pieceType]
+	badgeText.Parent = badge
+	local badgeCorner = Instance.new("UICorner")
+	badgeCorner.CornerRadius = UDim.new(0.5, 0)
+	badgeCorner.Parent = badgeText
 
 	model.Parent = piecesFolder
 	occupancy[key(row, col)] = model
@@ -356,12 +392,31 @@ tryMove = function(toRow, toCol)
 end
 
 local backRank = {"Rook", "Knight", "Bishop", "Queen", "King", "Bishop", "Knight", "Rook"}
-for col = 1, 8 do
-	makePiece(backRank[col], "White", 1, col)
-	makePiece("Pawn", "White", 2, col)
-	makePiece(backRank[col], "Black", 8, col)
-	makePiece("Pawn", "Black", 7, col)
+
+local function resetGame()
+	piecesFolder:ClearAllChildren()
+	table.clear(occupancy)
+	selectedPiece = nil
+	currentTurn = "White"
+	for col = 1, 8 do
+		makePiece(backRank[col], "White", 1, col)
+		makePiece("Pawn", "White", 2, col)
+		makePiece(backRank[col], "Black", 8, col)
+		makePiece("Pawn", "Black", 7, col)
+	end
+	setStatus("White to move | New game")
 end
+
+controlEvent.OnServerEvent:Connect(function(player, action)
+	if action == "Reset" then
+		resetGame()
+	elseif action == "Deselect" then
+		selectedPiece = nil
+		setStatus(currentTurn .. " to move")
+	end
+end)
+
+resetGame()
 
 -- Spawn a simple floor under the board.
 local floor = Instance.new("Part")
@@ -374,4 +429,4 @@ floor.Color = Color3.fromRGB(28, 32, 42)
 floor.Parent = arena
 
 setStatus("White to move")
-print("YUGATNEO Chess Arena loaded: board and 32 pieces created.")
+print("YUGATNEO Chess Arena loaded: board, labelled pieces, and game controls created.")
