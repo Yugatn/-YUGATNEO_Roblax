@@ -104,7 +104,8 @@ local function memberCount(side)
 	return #sideMembers(side)
 end
 local function startTeamQuiz(side, row, col, pieceType)
-	if pendingTeamQuiz or gameOver then return end
+	if gameOver then return true end
+	if pendingTeamQuiz then return true end
 	local members = sideMembers(side)
 	if #members < 2 then return false end
 	teamQuizSerial += 1
@@ -384,15 +385,8 @@ local function makePiece(pieceType, side, row, col)
 		end
 	end
 
-	-- Attach a detector to every visible part so the upper shape is clickable too.
-	for _, descendant in ipairs(model:GetChildren()) do
-		if descendant:IsA("BasePart") then
-			local click = Instance.new("ClickDetector")
-			click.MaxActivationDistance = 80
-			click.Parent = descendant
-			click.MouseClick:Connect(onPieceClicked)
-		end
-	end
+	-- Mouse selection is handled by the client raycast and validated by the server.
+	-- Avoid overlapping ClickDetectors on the many decorative parts of each piece.
 
 	return model
 end
@@ -413,14 +407,7 @@ for row = 1, 8 do
 		tile:SetAttribute("Col", col)
 		tiles[row][col] = tile
 
-		local click = Instance.new("ClickDetector")
-		click.MaxActivationDistance = 100
-		click.Parent = tile
-		click.MouseClick:Connect(function(player)
-			if selectedPiece then
-				tryMove(row, col, nil, player)
-			end
-		end)
+		-- The client sends a square coordinate; server-side rules validate every requested move.
 	end
 end
 
@@ -515,6 +502,7 @@ tryMove = function(toRow, toCol, promotionChoice, player)
 	end
 
 	selectedPiece = nil
+	selectedTile = nil
 	selectedByUserId = nil
 	pendingPromotion = nil
 	controlEvent:FireAllClients("ClearHighlights")
@@ -590,7 +578,35 @@ local function resetGame()
 end
 
 controlEvent.OnServerEvent:Connect(function(player, action, choice)
-	if action == "JoinTeam" then
+	if action == "BoardClick" then
+		if typeof(choice) ~= "table" then return end
+		local row, col = tonumber(choice.row), tonumber(choice.col)
+		if not row or not col or row % 1 ~= 0 or col % 1 ~= 0 or not inside(row, col) then return end
+		if gameOver or pendingPromotion or playerSides[player.UserId] ~= currentTurn then return end
+		local targetPiece = occupancy[key(row, col)]
+		if targetPiece and targetPiece:GetAttribute("Side") == currentTurn then
+			if selectedPiece == targetPiece and selectedByUserId == player.UserId then
+				selectedPiece = nil
+				selectedTile = nil
+				selectedByUserId = nil
+				controlEvent:FireAllClients("ClearHighlights")
+				setStatus(currentTurn .. " to move")
+				return
+			end
+			local pieceType = targetPiece:GetAttribute("PieceType")
+			if startTeamQuiz(currentTurn, row, col, pieceType) then return end
+			selectedPiece = targetPiece
+			selectedTile = { row = row, col = col }
+			selectedByUserId = player.UserId
+			local legal = ChessEngine.legalMoves(engineState, row, col)
+			controlEvent:FireAllClients("LegalMoves", legal, row, col)
+			setStatus(currentTurn .. " to move | Selected: " .. pieceType)
+		elseif selectedPiece and selectedByUserId == player.UserId then
+			tryMove(row, col, nil, player)
+		else
+			controlEvent:FireClient(player, "Status", "Select one of your " .. currentTurn .. " pieces first.")
+		end
+	elseif action == "JoinTeam" then
 		local side = choice
 		if side ~= "White" and side ~= "Black" then return end
 		if botEnabled and side == "Black" then
@@ -625,6 +641,7 @@ controlEvent.OnServerEvent:Connect(function(player, action, choice)
 		end
 		pendingTeamQuiz = nil
 		selectedPiece = occupancy[key(quiz.row, quiz.col)]
+		selectedTile = { row = quiz.row, col = quiz.col }
 		selectedByUserId = player.UserId
 		controlEvent:FireAllClients("TeamQuizHide")
 		if selectedPiece and selectedPiece.Parent then
@@ -662,6 +679,7 @@ controlEvent.OnServerEvent:Connect(function(player, action, choice)
 	elseif action == "Deselect" then
 		if selectedByUserId ~= player.UserId then return end
 		selectedPiece = nil
+		selectedTile = nil
 		selectedByUserId = nil
 		pendingPromotion = nil
 		pendingPromotionUserId = nil
