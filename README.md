@@ -43,6 +43,14 @@ A Roblox Studio chess game prototype for the YUGATNEO world. This branch adds a 
 - The computer and phone prompts currently show informational status messages; they are visual world props, not yet connected to a real browser, telephony, or navigation system.
 - Reference used: Roblox Creator Hub documentation for [ClickDetector](https://create.roblox.com/docs/reference/engine/classes/ClickDetector) and [RemoteEvents](https://create.roblox.com/docs/scripting/events/remote). This implementation uses original project code rather than copying a third-party chess engine with unclear or restrictive licensing.
 
+## Input reliability and engine checks
+
+- Board input uses `UserInputService` plus a camera raycast filtered to the chess arena, then sends only row/column coordinates to the server. This avoids relying on overlapping `ClickDetector` instances and ignores characters and unrelated scenery.
+- The server rate-limits board-click requests and returns player-specific feedback for invalid squares, ended games, pending promotion, and the wrong side to move. The server remains authoritative for turn ownership and legal moves.
+- The engine resets the half-move counter on pawn promotion as required by the 50-move-rule counter semantics.
+- A manual engine smoke-test harness is available at [`tests/ChessEngineSmokeTest.lua`](tests/ChessEngineSmokeTest.lua). Copy it into a temporary Script under `ServerScriptService` and run Play; it checks standard starting-position perft counts at depths 1–3 (20, 400, 8902). Remove the temporary Script after testing.
+- These changes have not been executed in Roblox Studio in this environment. Treat the smoke-test file as a test harness to run, not as evidence that the tests have passed.
+
 ## Run in Roblox Studio
 
 1. Open this repository folder on your Mac.
