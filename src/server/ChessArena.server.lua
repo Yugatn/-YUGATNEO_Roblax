@@ -70,6 +70,9 @@ local pendingPromotion = nil
 local pendingPromotionUserId = nil
 local selectedByUserId = nil
 local gameOver = false
+local botEnabled = false
+local botThinking = false
+local botMove
 local tryMove
 
 -- This prototype has one shared board. Only the two seated players may move:
@@ -459,11 +462,53 @@ tryMove = function(toRow, toCol, promotionChoice, player)
 	local status = ChessEngine.status(engineState)
 	gameOver = status.gameOver
 	setStatus(status.text)
+	if botEnabled and currentTurn == "Black" and not gameOver then
+		task.delay(0.65, function()
+			if botMove and botEnabled and currentTurn == "Black" and not gameOver then botMove() end
+		end)
+	end
+end
+
+botMove = function()
+	if botThinking or not botEnabled or gameOver or currentTurn ~= "Black" then return end
+	botThinking = true
+	local candidates = ChessEngine.allLegalMoves(engineState, "Black")
+	if #candidates == 0 then
+		botThinking = false
+		return
+	end
+	local bestScore = -math.huge
+	local best = {}
+	for _, candidate in ipairs(candidates) do
+		local copy = ChessEngine.copy(engineState)
+		local moving = copy.board[candidate.fromRow][candidate.fromCol]
+		local target = copy.board[candidate.row][candidate.col]
+		local score = math.random() * 0.4
+		if target then
+			local values = { Pawn = 1, Knight = 3, Bishop = 3.2, Rook = 5, Queen = 9, King = 100 }
+			score += 2 + (values[target.type] or 0) * 0.8 - (values[moving.type] or 1) * 0.05
+		end
+		if moving.type == "Pawn" and (candidate.row == 1 or candidate.row == 8) then score += 8 end
+		ChessEngine.move(copy, candidate.fromRow, candidate.fromCol, candidate.row, candidate.col, "Queen")
+		if ChessEngine.inCheck(copy, "White") then score += 1.4 end
+		if ChessEngine.inCheck(copy, "Black") then score -= 1.2 end
+		if score > bestScore then bestScore = score; best = { candidate }
+		elseif score >= bestScore - 0.35 then table.insert(best, candidate) end
+	end
+	local chosen = best[math.random(1, #best)]
+	local model = occupancy[key(chosen.fromRow, chosen.fromCol)]
+	if model then
+		selectedPiece = model
+		selectedByUserId = -1
+		tryMove(chosen.row, chosen.col, "Queen", { UserId = -1 })
+	end
+	botThinking = false
 end
 
 local backRank = {"Rook", "Knight", "Bishop", "Queen", "King", "Bishop", "Knight", "Rook"}
 
 local function resetGame()
+	botThinking = false
 	piecesFolder:ClearAllChildren()
 	table.clear(occupancy)
 	selectedPiece = nil
@@ -483,7 +528,19 @@ local function resetGame()
 end
 
 controlEvent.OnServerEvent:Connect(function(player, action, choice)
-	if action == "Promote" then
+	if action == "PlayBot" then
+		if playerSides[player.UserId] == "White" or not seatPlayers.White or seatPlayers.White == player.UserId then
+			botEnabled = true
+			seatPlayers.White = player.UserId
+			seatPlayers.Black = -1
+			playerSides[player.UserId] = "White"
+			hostUserId = player.UserId
+			resetGame()
+			controlEvent:FireClient(player, "Status", "Practice vs Bot — you are White. Select a piece, then a green square.")
+		else
+			controlEvent:FireClient(player, "Status", "This shared board is in use. Wait for a seat to open.")
+		end
+	elseif action == "Promote" then
 		if pendingPromotion and selectedPiece and pendingPromotionUserId == player.UserId and selectedByUserId == player.UserId then
 			local pending = pendingPromotion
 			pendingPromotion = nil
@@ -514,11 +571,246 @@ resetGame()
 local floor = Instance.new("Part")
 floor.Name = "ArenaFloor"
 floor.Anchored = true
-floor.Size = Vector3.new(50, 1, 50)
+floor.Size = Vector3.new(190, 1, 190)
 floor.Position = Vector3.new(0, -0.2, 0)
 floor.Material = Enum.Material.Slate
 floor.Color = Color3.fromRGB(28, 32, 42)
 floor.Parent = arena
 
-setStatus("White to move")
+-- Expand the arena into a walkable observatory courtyard.
+local worldFolder = Instance.new("Folder")
+worldFolder.Name = "World"
+worldFolder.Parent = arena
+
+local function worldPart(name, size, position, color, material, parent)
+	local p = Instance.new("Part")
+	p.Name = name
+	p.Size = size
+	p.Position = position
+	p.Anchored = true
+	p.Material = material or Enum.Material.Metal
+	p.Color = color
+	p.TopSurface = Enum.SurfaceType.Smooth
+	p.BottomSurface = Enum.SurfaceType.Smooth
+	p.Parent = parent or worldFolder
+	return p
+end
+
+local fenceColor = Color3.fromRGB(42, 50, 63)
+local trimColor = Color3.fromRGB(226, 177, 73)
+local fenceY, fenceRadius = 8, 72
+for _, z in ipairs({-fenceRadius, fenceRadius}) do
+	worldPart("PerimeterFence", Vector3.new(144, fenceY, 1.2), Vector3.new(0, fenceY/2, z), fenceColor)
+	worldPart("FenceGoldRail", Vector3.new(144, 0.35, 1.5), Vector3.new(0, fenceY-0.5, z), trimColor)
+end
+for _, x in ipairs({-fenceRadius, fenceRadius}) do
+	worldPart("PerimeterFence", Vector3.new(1.2, fenceY, 144), Vector3.new(x, fenceY/2, 0), fenceColor)
+	worldPart("FenceGoldRail", Vector3.new(1.5, 0.35, 144), Vector3.new(x, fenceY-0.5, 0), trimColor)
+end
+-- Slender fence bars make the perimeter read as a secure arena enclosure.
+for i = -68, 68, 4 do
+	for _, z in ipairs({-fenceRadius, fenceRadius}) do worldPart("FenceBar", Vector3.new(0.35, 7.4, 0.5), Vector3.new(i, 3.9, z), trimColor) end
+	for _, x in ipairs({-fenceRadius, fenceRadius}) do worldPart("FenceBar", Vector3.new(0.5, 7.4, 0.35), Vector3.new(x, 3.9, i), trimColor) end
+end
+
+-- Four watchtowers with walkable platforms, ladder rungs and telescope prompts.
+for _, corner in ipairs({Vector2.new(-62,-62), Vector2.new(62,-62), Vector2.new(-62,62), Vector2.new(62,62)}) do
+	local x, z = corner.X, corner.Y
+	worldPart("WatchtowerLeg", Vector3.new(2, 18, 2), Vector3.new(x-4, 9, z-4), fenceColor)
+	worldPart("WatchtowerLeg", Vector3.new(2, 18, 2), Vector3.new(x+4, 9, z-4), fenceColor)
+	worldPart("WatchtowerLeg", Vector3.new(2, 18, 2), Vector3.new(x-4, 9, z+4), fenceColor)
+	worldPart("WatchtowerLeg", Vector3.new(2, 18, 2), Vector3.new(x+4, 9, z+4), fenceColor)
+	worldPart("WatchtowerPlatform", Vector3.new(12, 1.5, 12), Vector3.new(x, 18, z), trimColor)
+	worldPart("TowerRail", Vector3.new(12, 1, 0.5), Vector3.new(x, 21, z-5.5), fenceColor)
+	worldPart("TowerRail", Vector3.new(12, 1, 0.5), Vector3.new(x, 21, z+5.5), fenceColor)
+	worldPart("TowerRail", Vector3.new(0.5, 1, 12), Vector3.new(x-5.5, 21, z), fenceColor)
+	worldPart("TowerRail", Vector3.new(0.5, 1, 12), Vector3.new(x+5.5, 21, z), fenceColor)
+	for y = 1, 17, 1.5 do
+		worldPart("LadderRung", Vector3.new(2.2, 0.25, 0.35), Vector3.new(x-4, y, z-5.2), trimColor)
+	end
+	local telescope = worldPart("ObservatoryTelescope", Vector3.new(1.2, 1.2, 5), Vector3.new(x, 20, z), Color3.fromRGB(25, 31, 42))
+	telescope.CFrame = CFrame.new(telescope.Position, Vector3.new(0, 3, 0))
+	local prompt = Instance.new("ProximityPrompt")
+	prompt.ActionText = "Look through telescope"
+	prompt.ObjectText = "Arena Observatory"
+	prompt.HoldDuration = 0.4
+	prompt.MaxActivationDistance = 10
+	prompt.Parent = telescope
+	prompt.Triggered:Connect(function(player)
+		controlEvent:FireClient(player, "Telescope", telescope.Position)
+	end)
+end
+
+-- Target range: targets can be clicked to train aim; each player gets a hit counter.
+local targetFolder = Instance.new("Folder")
+targetFolder.Name = "TargetRange"
+targetFolder.Parent = worldFolder
+local targetHits = {}
+for lane = 1, 3 do
+	for targetIndex = 1, 5 do
+		local x = 28 + (targetIndex-1)*4
+		local z = -24 + (lane-1)*8
+		local target = worldPart("Target_"..lane.."_"..targetIndex, Vector3.new(2.5, 3.5, 0.7), Vector3.new(x, 2.5, z), Color3.fromRGB(185, 58, 55), Enum.Material.Neon, targetFolder)
+		target.Shape = Enum.PartType.Cylinder
+		target.Orientation = Vector3.new(0, 0, 90)
+		local click = Instance.new("ClickDetector")
+		click.MaxActivationDistance = 90
+		click.Parent = target
+		click.MouseClick:Connect(function(player)
+			targetHits[player.UserId] = (targetHits[player.UserId] or 0) + 1
+			controlEvent:FireClient(player, "Status", "Target practice: "..targetHits[player.UserId].." hits. Click another target.")
+			target.Color = Color3.fromRGB(75, 190, 130)
+			task.delay(0.45, function() if target.Parent then target.Color = Color3.fromRGB(185,58,55) end end)
+		end)
+	end
+end
+
+-- Reaction test pad: wait for green, then click as quickly as possible.
+local reactionPad = worldPart("ReactionTestPad", Vector3.new(8, 0.7, 8), Vector3.new(35, 0.2, 32), Color3.fromRGB(170, 65, 65), Enum.Material.Neon)
+local reactionClick = Instance.new("ClickDetector")
+reactionClick.MaxActivationDistance = 90
+reactionClick.Parent = reactionPad
+local reactionReadyAt = nil
+local reactionArmed = false
+local reactionPrompt = Instance.new("ProximityPrompt")
+reactionPrompt.ActionText = "Start reaction test"
+reactionPrompt.ObjectText = "Reflex Lab"
+reactionPrompt.HoldDuration = 0
+reactionPrompt.MaxActivationDistance = 12
+reactionPrompt.Parent = reactionPad
+reactionPrompt.Triggered:Connect(function(player)
+	reactionArmed = false
+	reactionReadyAt = nil
+	reactionPad.Color = Color3.fromRGB(170,65,65)
+	controlEvent:FireClient(player, "Status", "Reaction test: wait for GREEN, then click the red pad.")
+	task.delay(math.random(2,5), function()
+		reactionArmed = true
+		reactionReadyAt = os.clock()
+		reactionPad.Color = Color3.fromRGB(70, 220, 125)
+	end)
+end)
+reactionClick.MouseClick:Connect(function(player)
+	if not reactionArmed or not reactionReadyAt then
+		controlEvent:FireClient(player, "Status", "Too early! Start again and wait for green.")
+		return
+	end
+	local elapsed = math.max(0, os.clock() - reactionReadyAt)
+	reactionArmed = false
+	reactionReadyAt = nil
+	reactionPad.Color = Color3.fromRGB(170,65,65)
+	controlEvent:FireClient(player, "Status", string.format("Reaction time: %.0f ms", elapsed*1000))
+end)
+
+-- Memory challenge: remember a short sequence of lit pads, then click in order.
+local memoryPads = {}
+local memoryColors = {
+	Color3.fromRGB(235,190,92), Color3.fromRGB(65,160,235),
+	Color3.fromRGB(180,95,225), Color3.fromRGB(75,190,130)
+}
+for i = 1, 4 do
+	local pad = worldPart("MemoryPad_"..i, Vector3.new(4,0.7,4), Vector3.new(-32+(i-1)*5,0.2,34), memoryColors[i], Enum.Material.Neon)
+	pad:SetAttribute("PadIndex", i)
+	local click = Instance.new("ClickDetector")
+	click.MaxActivationDistance = 90
+	click.Parent = pad
+	memoryPads[i] = pad
+end
+local memorySequence, memoryStep, memoryPlayer = {}, 0, nil
+local memoryStart = worldPart("MemoryStart", Vector3.new(6,1,5), Vector3.new(-32,0.2,27), trimColor, Enum.Material.Neon)
+local memoryPrompt = Instance.new("ProximityPrompt")
+memoryPrompt.ActionText = "Start memory challenge"
+memoryPrompt.ObjectText = "Memory Lab"
+memoryPrompt.HoldDuration = 0
+memoryPrompt.MaxActivationDistance = 12
+memoryPrompt.Parent = memoryStart
+memoryPrompt.Triggered:Connect(function(player)
+	memoryPlayer = player.UserId
+	memorySequence, memoryStep = {}, 0
+	for i = 1, 4 do memorySequence[i] = math.random(1,4) end
+	controlEvent:FireClient(player, "Status", "Memorize the 4-pad sequence. Watch the pads light up.")
+	task.spawn(function()
+		for _, index in ipairs(memorySequence) do
+			local pad = memoryPads[index]
+			local oldColor = pad.Color
+			pad.Color = Color3.new(1,1,1)
+			task.wait(0.45)
+			pad.Color = oldColor
+			task.wait(0.2)
+		end
+		controlEvent:FireClient(player, "Status", "Repeat the sequence by clicking pads 1–4 in order.")
+	end)
+end)
+for i, pad in ipairs(memoryPads) do
+	pad:FindFirstChildOfClass("ClickDetector").MouseClick:Connect(function(player)
+		if memoryPlayer ~= player.UserId or #memorySequence == 0 then return end
+		memoryStep += 1
+		if i ~= memorySequence[memoryStep] then
+			controlEvent:FireClient(player, "Status", "Memory challenge failed. Start again to retry.")
+			memorySequence, memoryStep, memoryPlayer = {}, 0, nil
+		elseif memoryStep == #memorySequence then
+			controlEvent:FireClient(player, "Status", "Memory challenge complete! Perfect recall.")
+			memorySequence, memoryStep, memoryPlayer = {}, 0, nil
+		else
+			controlEvent:FireClient(player, "Status", "Correct: "..memoryStep.."/"..#memorySequence)
+		end
+	end)
+end
+
+-- Give every avatar round sunglasses and a simple beard accessory built from welded parts.
+local function styleCharacter(character)
+	local head = character:WaitForChild("Head", 5)
+	if not head or head:FindFirstChild("YUGATNEO_Sunglasses") then return end
+	local glasses = Instance.new("Model")
+	glasses.Name = "YUGATNEO_Sunglasses"
+	glasses.Parent = character
+	local function lens(name, x)
+		local part = Instance.new("Part")
+		part.Name = name
+		part.Shape = Enum.PartType.Cylinder
+		part.Size = Vector3.new(0.12, 0.62, 0.62)
+		part.Color = Color3.fromRGB(8,10,14)
+		part.Material = Enum.Material.Glass
+		part.Transparency = 0.08
+		part.CanCollide = false
+		part.Massless = true
+		part.CFrame = head.CFrame * CFrame.new(x,0.03,-0.53) * CFrame.Angles(0,0,math.rad(90))
+		part.Parent = glasses
+		local weld = Instance.new("WeldConstraint")
+		weld.Part0, weld.Part1 = head, part
+		weld.Parent = part
+	end
+	lens("LeftRoundLens", -0.28)
+	lens("RightRoundLens", 0.28)
+	local bridge = Instance.new("Part")
+	bridge.Name = "GlassesBridge"
+	bridge.Size = Vector3.new(0.24,0.07,0.08)
+	bridge.Color = Color3.fromRGB(222,175,65)
+	bridge.CanCollide = false
+	bridge.Massless = true
+	bridge.CFrame = head.CFrame * CFrame.new(0,0.03,-0.59)
+	bridge.Parent = glasses
+	local bridgeWeld = Instance.new("WeldConstraint")
+	bridgeWeld.Part0, bridgeWeld.Part1 = head, bridge
+	bridgeWeld.Parent = bridge
+	local beard = Instance.new("Part")
+	beard.Name = "YUGATNEO_Beard"
+	beard.Shape = Enum.PartType.Ball
+	beard.Size = Vector3.new(0.65,0.45,0.34)
+	beard.Color = Color3.fromRGB(35,27,23)
+	beard.CanCollide = false
+	beard.Massless = true
+	beard.CFrame = head.CFrame * CFrame.new(0,-0.48,-0.38)
+	beard.Parent = character
+	local beardWeld = Instance.new("WeldConstraint")
+	beardWeld.Part0, beardWeld.Part1 = head, beard
+	beardWeld.Parent = beard
+end
+local function stylePlayer(player)
+	player.CharacterAdded:Connect(function(character) task.spawn(styleCharacter, character) end)
+	if player.Character then task.spawn(styleCharacter, player.Character) end
+end
+for _, player in ipairs(Players:GetPlayers()) do stylePlayer(player) end
+Players.PlayerAdded:Connect(stylePlayer)
+
+setStatus("White to move | Walk to the board and choose Practice vs Bot in the HUD")
 print("YUGATNEO Chess Arena loaded: board, labelled pieces, and game controls created.")
