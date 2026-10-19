@@ -231,6 +231,7 @@ end
 local function applyMoveUnchecked(state, fromRow, fromCol, move, promotion)
 	local board = state.board
 	local piece = board[fromRow][fromCol]
+	local wasPawn = piece.type == "Pawn"
 	local captured = board[move.row][move.col]
 	if move.enPassant then
 		local capturedRow = move.row + (piece.side == "White" and -1 or 1)
@@ -270,7 +271,7 @@ local function applyMoveUnchecked(state, fromRow, fromCol, move, promotion)
 		if move.row == home and move.col == 1 then state.castling[captured.side].queenSide = false end
 		if move.row == home and move.col == 8 then state.castling[captured.side].kingSide = false end
 	end
-	if captured or piece.type == "Pawn" then state.halfMove = 0 else state.halfMove += 1 end
+	if captured or wasPawn then state.halfMove = 0 else state.halfMove += 1 end
 	if piece.side == "Black" then state.fullMove += 1 end
 	state.turn = other(piece.side)
 	return captured
