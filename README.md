@@ -18,6 +18,7 @@ A Roblox Studio chess game prototype for the YUGATNEO world. This branch uses on
 
 - There is only one physical board and one match. The two fields are player join points, not additional boards. Independent table IDs and matchmaking are not implemented yet.
 - Joining the server does not automatically claim a side. Board input is blocked until both White and Black fields are occupied. If a side becomes empty, the match is stopped; automatic queueing and reconnect support are not implemented.
+- The server reuses the existing `ChessControlEvent` during script reloads to avoid creating separate client/server event instances. HUD team buttons can add teammates to an occupied side up to the three-player limit; entering the physical fields claims only an unoccupied side.
 - The rules engine is a first implementation and still needs scenario-based testing in Roblox Studio before it can be treated as tournament-ready.
 - Draw handling is present in the current engine branch but still requires runtime regression testing.
 - Automated tests and live Roblox Studio verification are still required before treating the rules engine as tournament-ready.
@@ -29,7 +30,7 @@ A Roblox Studio chess game prototype for the YUGATNEO world. This branch uses on
 
 ## Cooperative teams and quiz captain
 
-- The primary White and Black players join by stepping onto their respective fields. Up to three human players can be assigned to each side using the **JOIN WHITE TEAM** and **JOIN BLACK TEAM** controls; team-joining flow still needs multi-client verification.
+- The primary White and Black players join by stepping onto their respective fields. Up to three human players can be assigned to each side using the **JOIN WHITE TEAM** and **JOIN BLACK TEAM** controls. Team membership and the quiz captain flow require multi-client verification.
 - When a side has multiple human teammates, clicking one of that side's pieces starts a short multiple-choice chess/general chess-knowledge quiz for that team. The first teammate to answer correctly becomes the move captain for that selection and chooses the legal destination.
 - The quiz is time-limited to 20 seconds. Each teammate gets one answer attempt per quiz. If no one answers correctly before time runs out, the team can click a friendly piece to try again.
 - The server decides the correct answer, controls quiz state, assigns the move captain, and still validates the chess move through `ChessEngine`.
