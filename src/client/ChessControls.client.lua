@@ -353,35 +353,35 @@ end
 
 local camera = workspace.CurrentCamera
 local previousCameraType, previousCameraSubject, previousCameraCFrame, previousCameraFOV
-local telescopeOverlay = Instance.new("Frame")
-telescopeOverlay.Name = "TelescopeOverlay"
-telescopeOverlay.AnchorPoint = Vector2.new(0.5, 0)
-telescopeOverlay.Position = UDim2.new(0.5, 0, 0, 18)
-telescopeOverlay.Size = UDim2.new(0, 280, 0, 54)
-telescopeOverlay.BackgroundColor3 = COLORS.panel
-telescopeOverlay.Visible = false
-telescopeOverlay.Parent = gui
-round(telescopeOverlay, 12)
-stroke(telescopeOverlay, COLORS.gold, 0.15)
-local telescopeLabel = Instance.new("TextLabel")
-telescopeLabel.Size = UDim2.new(1, -90, 1, 0)
-telescopeLabel.Position = UDim2.new(0, 12, 0, 0)
-telescopeLabel.BackgroundTransparency = 1
-telescopeLabel.Text = "OBSERVATORY • telescope view"
-telescopeLabel.TextColor3 = COLORS.gold
-telescopeLabel.Font = Enum.Font.GothamBold
-telescopeLabel.TextSize = 11
-telescopeLabel.Parent = telescopeOverlay
-local exitTelescope = Instance.new("TextButton")
-exitTelescope.Size = UDim2.new(0, 76, 0, 32)
-exitTelescope.Position = UDim2.new(1, -84, 0.5, -16)
-exitTelescope.BackgroundColor3 = COLORS.red
-exitTelescope.Text = "EXIT"
-exitTelescope.TextColor3 = COLORS.text
-exitTelescope.Font = Enum.Font.GothamBold
-exitTelescope.TextSize = 12
-exitTelescope.Parent = telescopeOverlay
-round(exitTelescope, 8)
+local chessViewOverlay = Instance.new("Frame")
+chessViewOverlay.Name = "ChessViewOverlay"
+chessViewOverlay.AnchorPoint = Vector2.new(0.5, 0)
+chessViewOverlay.Position = UDim2.new(0.5, 0, 0, 18)
+chessViewOverlay.Size = UDim2.new(0, 280, 0, 54)
+chessViewOverlay.BackgroundColor3 = COLORS.panel
+chessViewOverlay.Visible = false
+chessViewOverlay.Parent = gui
+round(chessViewOverlay, 12)
+stroke(chessViewOverlay, COLORS.gold, 0.15)
+local chessViewLabel = Instance.new("TextLabel")
+chessViewLabel.Size = UDim2.new(1, -90, 1, 0)
+chessViewLabel.Position = UDim2.new(0, 12, 0, 0)
+chessViewLabel.BackgroundTransparency = 1
+chessViewLabel.Text = "CHESS BOARD • BOARD VIEW"
+chessViewLabel.TextColor3 = COLORS.gold
+chessViewLabel.Font = Enum.Font.GothamBold
+chessViewLabel.TextSize = 11
+chessViewLabel.Parent = chessViewOverlay
+local exitChessView = Instance.new("TextButton")
+exitChessView.Size = UDim2.new(0, 76, 0, 32)
+exitChessView.Position = UDim2.new(1, -84, 0.5, -16)
+exitChessView.BackgroundColor3 = COLORS.red
+exitChessView.Text = "EXIT"
+exitChessView.TextColor3 = COLORS.text
+exitChessView.Font = Enum.Font.GothamBold
+exitChessView.TextSize = 12
+exitChessView.Parent = chessViewOverlay
+round(exitChessView, 8)
 local RunService = game:GetService("RunService")
 local activeChessCameraCFrame = nil
 local CAMERA_BIND_NAME = "YUGATNEO_ChessTopDownCamera"
@@ -398,11 +398,11 @@ local function releaseCamera()
 	end
 end
 
-local function stopTelescope()
-	telescopeOverlay.Visible = false
+local function stopChessView()
+	chessViewOverlay.Visible = false
 	releaseCamera()
 end
-exitTelescope.Activated:Connect(stopTelescope)
+exitChessView.Activated:Connect(stopChessView)
 
 controlEvent.OnClientEvent:Connect(function(action, payload, fromRow, fromCol)
 	if action == "TeamQuiz" then
@@ -428,10 +428,10 @@ controlEvent.OnClientEvent:Connect(function(action, payload, fromRow, fromCol)
 			quizFeedback.TextColor3 = COLORS.red
 		end
 	end
-	if action == "Telescope" or action == "ChessView" then
+	if action == "ChessView" then
 		camera = workspace.CurrentCamera
 		if camera then
-			-- Capture the normal camera state only when entering the view, not on repeated touch events.
+			-- Capture the normal camera state only when entering board view.
 			if camera.CameraType ~= Enum.CameraType.Scriptable or not activeChessCameraCFrame then
 				previousCameraType = camera.CameraType
 				previousCameraSubject = camera.CameraSubject
@@ -439,37 +439,25 @@ controlEvent.OnClientEvent:Connect(function(action, payload, fromRow, fromCol)
 				previousCameraFOV = camera.FieldOfView
 			end
 			camera.CameraType = Enum.CameraType.Scriptable
-			if action == "ChessView" then
-				telescopeLabel.Text = "CHESS BOARD • BOARD VIEW"
-				-- Board spans about 32 studs. An oblique elevated angle avoids the edge-on
-				-- appearance of a perfectly vertical camera and keeps the full board in frame.
-				-- Use the board center sent by the server so camera and board cannot drift apart.
-				local target = typeof(payload) == "Vector3" and payload or Vector3.new(0, 1, 0)
-				local viewport = camera.ViewportSize
-				local boardSpan = 36
-				local verticalFov = math.rad(camera.FieldOfView)
-				local aspect = math.max(viewport.X / math.max(viewport.Y, 1), 1)
-				local requiredDistance = (boardSpan / 2) / math.tan(verticalFov / 2)
-				local height = math.max(34, requiredDistance * 0.78)
-				local depth = math.max(18, height * 0.48)
-				activeChessCameraCFrame = CFrame.lookAt(target + Vector3.new(0, height, depth), target)
-				camera.FieldOfView = 55
-				RunService:UnbindFromRenderStep(CAMERA_BIND_NAME)
-				RunService:BindToRenderStep(CAMERA_BIND_NAME, Enum.RenderPriority.Camera.Value + 1, function()
-					local currentCamera = workspace.CurrentCamera
-					if currentCamera then
-						currentCamera.CameraType = Enum.CameraType.Scriptable
-						currentCamera.CFrame = activeChessCameraCFrame
-					end
-				end)
-			else
-				activeChessCameraCFrame = nil
-				RunService:UnbindFromRenderStep(CAMERA_BIND_NAME)
-				telescopeLabel.Text = "OBSERVATORY • telescope view"
-				camera.CFrame = CFrame.lookAt(payload + Vector3.new(0, 2, 1), Vector3.new(0, 2, 0))
-			end
-			camera.CFrame = activeChessCameraCFrame or camera.CFrame
-			telescopeOverlay.Visible = true
+			chessViewLabel.Text = "CHESS BOARD • BOARD VIEW"
+			local target = typeof(payload) == "Vector3" and payload or Vector3.new(0, 1, 0)
+			local boardSpan = 36
+			local verticalFov = math.rad(55)
+			local requiredDistance = (boardSpan / 2) / math.tan(verticalFov / 2)
+			local height = math.max(34, requiredDistance * 0.78)
+			local depth = math.max(18, height * 0.48)
+			activeChessCameraCFrame = CFrame.lookAt(target + Vector3.new(0, height, depth), target)
+			camera.FieldOfView = 55
+			RunService:UnbindFromRenderStep(CAMERA_BIND_NAME)
+			RunService:BindToRenderStep(CAMERA_BIND_NAME, Enum.RenderPriority.Camera.Value + 1, function()
+				local currentCamera = workspace.CurrentCamera
+				if currentCamera then
+					currentCamera.CameraType = Enum.CameraType.Scriptable
+					currentCamera.CFrame = activeChessCameraCFrame
+				end
+			end)
+			camera.CFrame = activeChessCameraCFrame
+			chessViewOverlay.Visible = true
 		end
 	elseif action == "SeatAssigned" then
 		local assigned = tostring(payload)
