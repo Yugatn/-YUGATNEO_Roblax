@@ -32,7 +32,7 @@ jobs:
       - name: Upload built place artifact
         uses: actions/upload-artifact@v4
         with:
-          name: yug atneo-roblox-place
+          name: yugatneo-roblox-place
           path: build.rbxlx
           if-no-files-found: error
           retention-days: 14
