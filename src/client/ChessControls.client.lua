@@ -41,7 +41,7 @@ end
 local panel = Instance.new("Frame")
 panel.Name = "ControlPanel"
 panel.Position = UDim2.new(0, 20, 0, 20)
-panel.Size = UDim2.new(0, 300, 0, 248)
+panel.Size = UDim2.new(0, 300, 0, 286)
 panel.BackgroundColor3 = COLORS.panel
 panel.BackgroundTransparency = 0.04
 panel.BorderSizePixel = 0
@@ -137,13 +137,14 @@ end
 local helpButton = makeButton("HelpButton", "♟  RULES", 12, 130, 86, COLORS.blue)
 local deselectButton = makeButton("DeselectButton", "CANCEL", 106, 130, 82, Color3.fromRGB(69, 79, 96))
 local resetButton = makeButton("ResetButton", "NEW GAME", 196, 130, 92, COLORS.red)
+local botButton = makeButton("PlayBotButton", "PLAY VS BOT", 12, 220, 276, COLORS.green)
 
 local tip = Instance.new("TextLabel")
 tip.Name = "Tip"
 tip.Position = UDim2.new(0, 14, 0, 176)
 tip.Size = UDim2.new(1, -28, 0, 42)
 tip.BackgroundTransparency = 1
-tip.Text = "Select a piece to reveal legal moves.\nClick a highlighted square to move."
+tip.Text = "1) Click PLAY VS BOT.  2) Select a piece.\n3) Click a green square to move."
 tip.TextColor3 = COLORS.muted
 tip.Font = Enum.Font.Gotham
 tip.TextSize = 11
@@ -178,7 +179,7 @@ local helpText = Instance.new("TextLabel")
 helpText.Position = UDim2.new(0, 14, 0, 44)
 helpText.Size = UDim2.new(1, -28, 1, -92)
 helpText.BackgroundTransparency = 1
-helpText.Text = "1. Click one of your pieces.\n2. Green squares show legal destinations.\n3. Click a destination to complete the move.\n\nIncludes check, checkmate, stalemate, castling, en passant and selectable promotion to queen, rook, bishop or knight.\n\nWhite moves first. Capturing the king is never a legal move."
+helpText.Text = "HOW TO START\n1. Press PLAY VS BOT. You play White.\n2. Click one of your light pieces.\n3. Green squares are legal moves. Click one.\n4. The bot replies as Black.\n\nPAWN: forward, captures diagonally.\nROOK: straight lines. BISHOP: diagonals.\nQUEEN: straight + diagonal. KNIGHT: L-shape.\nKING: one square; keep it safe.\n\nGoal: checkmate the enemy king."
 helpText.TextColor3 = COLORS.text
 helpText.Font = Enum.Font.Gotham
 helpText.TextSize = 12
@@ -203,6 +204,9 @@ deselectButton.Activated:Connect(function()
 end)
 resetButton.Activated:Connect(function()
 	controlEvent:FireServer("Reset")
+end)
+botButton.Activated:Connect(function()
+	controlEvent:FireServer("PlayBot")
 end)
 
 local promotionPanel = Instance.new("Frame")
@@ -259,8 +263,60 @@ local function getTileColor(row, col)
 	return ((row + col) % 2 == 0) and Color3.fromRGB(238, 232, 218) or Color3.fromRGB(65, 75, 91)
 end
 
+local camera = workspace.CurrentCamera
+local previousCameraType, previousCameraSubject, previousCameraCFrame
+local telescopeOverlay = Instance.new("Frame")
+telescopeOverlay.Name = "TelescopeOverlay"
+telescopeOverlay.AnchorPoint = Vector2.new(0.5, 0)
+telescopeOverlay.Position = UDim2.new(0.5, 0, 0, 18)
+telescopeOverlay.Size = UDim2.new(0, 280, 0, 54)
+telescopeOverlay.BackgroundColor3 = COLORS.panel
+telescopeOverlay.Visible = false
+telescopeOverlay.Parent = gui
+round(telescopeOverlay, 12)
+stroke(telescopeOverlay, COLORS.gold, 0.15)
+local telescopeLabel = Instance.new("TextLabel")
+telescopeLabel.Size = UDim2.new(1, -90, 1, 0)
+telescopeLabel.Position = UDim2.new(0, 12, 0, 0)
+telescopeLabel.BackgroundTransparency = 1
+telescopeLabel.Text = "OBSERVATORY • telescope view"
+telescopeLabel.TextColor3 = COLORS.gold
+telescopeLabel.Font = Enum.Font.GothamBold
+telescopeLabel.TextSize = 11
+telescopeLabel.Parent = telescopeOverlay
+local exitTelescope = Instance.new("TextButton")
+exitTelescope.Size = UDim2.new(0, 76, 0, 32)
+exitTelescope.Position = UDim2.new(1, -84, 0.5, -16)
+exitTelescope.BackgroundColor3 = COLORS.red
+exitTelescope.Text = "EXIT"
+exitTelescope.TextColor3 = COLORS.text
+exitTelescope.Font = Enum.Font.GothamBold
+exitTelescope.TextSize = 12
+exitTelescope.Parent = telescopeOverlay
+round(exitTelescope, 8)
+local function stopTelescope()
+	telescopeOverlay.Visible = false
+	camera = workspace.CurrentCamera
+	if camera then
+		camera.CameraType = previousCameraType or Enum.CameraType.Custom
+		camera.CameraSubject = previousCameraSubject or (player.Character and player.Character:FindFirstChildOfClass("Humanoid"))
+		if previousCameraCFrame then camera.CFrame = previousCameraCFrame end
+	end
+end
+exitTelescope.Activated:Connect(stopTelescope)
+
 controlEvent.OnClientEvent:Connect(function(action, payload, fromRow, fromCol)
-	if action == "SeatAssigned" then
+	if action == "Telescope" then
+		camera = workspace.CurrentCamera
+		if camera then
+			previousCameraType = camera.CameraType
+			previousCameraSubject = camera.CameraSubject
+			previousCameraCFrame = camera.CFrame
+			camera.CameraType = Enum.CameraType.Scriptable
+			camera.CFrame = CFrame.lookAt(payload + Vector3.new(0, 2, 1), Vector3.new(0, 2, 0))
+			telescopeOverlay.Visible = true
+		end
+	elseif action == "SeatAssigned" then
 		local assigned = tostring(payload)
 		if assigned == "White" or assigned == "Black" then
 			statusLabel.Text = "You are " .. assigned .. " — waiting for both players"
