@@ -790,19 +790,10 @@ local function makePlayerField(name, side, position, color)
 	local corner = Instance.new("UICorner")
 	corner.CornerRadius = UDim.new(0, 10)
 	corner.Parent = label
-	local prompt = Instance.new("ProximityPrompt")
-	prompt.Name = "Join" .. side .. "SidePrompt"
-	prompt.ActionText = "Play as " .. side
-	prompt.ObjectText = side .. " side of the chessboard"
-	prompt.KeyboardKeyCode = Enum.KeyCode.E
-	prompt.HoldDuration = 0
-	prompt.MaxActivationDistance = 12
-	prompt.RequiresLineOfSight = false
-	prompt.Parent = field
-	return field, prompt
+	return field
 end
-local whiteField, whitePrompt = makePlayerField("WhitePlayerField", "White", Vector3.new(0, 0.35, 24), Color3.fromRGB(64, 170, 125))
-local blackField, blackPrompt = makePlayerField("BlackPlayerField", "Black", Vector3.new(0, 0.35, -24), Color3.fromRGB(70, 125, 190))
+local whiteField = makePlayerField("WhitePlayerField", "White", Vector3.new(0, 0.35, 24), Color3.fromRGB(64, 170, 125))
+local blackField = makePlayerField("BlackPlayerField", "Black", Vector3.new(0, 0.35, -24), Color3.fromRGB(70, 125, 190))
 
 local function claimSide(player, side)
 	if side ~= "White" and side ~= "Black" then return end
@@ -831,9 +822,6 @@ local function claimSide(player, side)
 		setStatus(side .. " player joined. Waiting for the other side.")
 	end
 end
-whitePrompt.Triggered:Connect(function(player) claimSide(player, "White") end)
-blackPrompt.Triggered:Connect(function(player) claimSide(player, "Black") end)
-
 local viewCooldown = {}
 local function connectViewField(field, side)
 	field.Touched:Connect(function(hit)
@@ -841,6 +829,9 @@ local function connectViewField(field, side)
 		local player = character and Players:GetPlayerFromCharacter(character)
 		if not player or viewCooldown[player.UserId] then return end
 		viewCooldown[player.UserId] = true
+		if not playerSides[player.UserId] then
+			claimSide(player, side)
+		end
 		controlEvent:FireClient(player, "ChessView", { center = Vector3.new(0, 1, 0), side = side })
 		task.delay(2, function() viewCooldown[player.UserId] = nil end)
 	end)
