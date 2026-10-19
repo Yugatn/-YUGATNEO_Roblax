@@ -49,8 +49,8 @@ This checklist is required before treating the prototype as tournament-ready. Th
 ## Dual-board synchronization
 - [ ] Confirm exactly one board spawns with 32 pieces in the correct starting position.
 - [ ] Confirm green White and blue Black player fields spawn on opposite sides of the same board.
-- [ ] Approach White field and press E; verify player is assigned White.
-- [ ] With a second client, approach Black field and press E; verify player is assigned Black and the match begins.
+- [ ] Walk onto White field; verify player is assigned White automatically.
+- [ ] With a second client, walk onto Black field; verify player is assigned Black and the match begins.
 - [ ] Verify a third client cannot claim an occupied side.
 - [ ] Verify the HUD does not claim both seats are occupied while both fields are empty.
 - [ ] On the single board, select a piece and move it; verify the same board updates correctly.
