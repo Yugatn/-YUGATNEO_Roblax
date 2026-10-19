@@ -9,6 +9,8 @@ local BOARD_Y = 1
 local PIECE_Y = BOARD_Y + 0.18
 local ORIGIN = Vector3.new(-16, BOARD_Y, -16)
 local BOARD_NAME = "YUGATNEO_ChessArena"
+local SECOND_BOARD_OFFSET = Vector3.new(40, 0, 0)
+local syncSecondBoard
 
 local old = workspace:FindFirstChild(BOARD_NAME)
 if old then
@@ -385,6 +387,29 @@ for row = 1, 8 do
 	end
 end
 
+-- A second physical board gives the Black player an independent place to sit and play.
+-- Both boards are synchronized views of the same server-authoritative game state.
+local blackBoardFolder = Instance.new("Folder")
+blackBoardFolder.Name = "BlackBoard"
+blackBoardFolder.Parent = arena
+local blackPiecesFolder = Instance.new("Folder")
+blackPiecesFolder.Name = "BlackPieces"
+blackPiecesFolder.Parent = arena
+for row = 1, 8 do
+	for col = 1, 8 do
+		local tile = Instance.new("Part")
+		tile.Name = "Square_" .. row .. "_" .. col
+		tile.Anchored = true
+		tile.Size = Vector3.new(TILE, 0.35, TILE)
+		tile.Position = Vector3.new((col - 4.5) * TILE, BOARD_Y, (row - 4.5) * TILE) + SECOND_BOARD_OFFSET
+		tile.Material = Enum.Material.SmoothPlastic
+		tile.Color = ((row + col) % 2 == 0) and WHITE or BLACK
+		tile.Parent = blackBoardFolder
+		tile:SetAttribute("Row", row)
+		tile:SetAttribute("Col", col)
+	end
+end
+
 local function pathIsClear(fromRow, fromCol, toRow, toCol)
 	local rowStep = toRow == fromRow and 0 or (toRow > fromRow and 1 or -1)
 	local colStep = toCol == fromCol and 0 or (toCol > fromCol and 1 or -1)
@@ -490,6 +515,7 @@ tryMove = function(toRow, toCol, promotionChoice, player)
 	local status = ChessEngine.status(engineState)
 	gameOver = status.gameOver
 	setStatus(status.text)
+	if syncSecondBoard then syncSecondBoard() end
 	if botEnabled and currentTurn == "Black" and not gameOver then
 		task.delay(0.65, function()
 			if botMove and botEnabled and currentTurn == "Black" and not gameOver then botMove() end
@@ -554,7 +580,23 @@ local function resetGame()
 		makePiece(backRank[col], "Black", 8, col)
 		makePiece("Pawn", "Black", 7, col)
 	end
+	if syncSecondBoard then syncSecondBoard() end
 	setStatus("White to move | New game")
+end
+
+syncSecondBoard = function()
+	blackPiecesFolder:ClearAllChildren()
+	for _, sourceModel in ipairs(piecesFolder:GetChildren()) do
+		if sourceModel:IsA("Model") then
+			local clone = sourceModel:Clone()
+			clone.Parent = blackPiecesFolder
+			local row = clone:GetAttribute("Row")
+			local col = clone:GetAttribute("Col")
+			if row and col then
+				clone:PivotTo(CFrame.new(squarePosition(row, col, PIECE_Y) + SECOND_BOARD_OFFSET) * CFrame.Angles(0, 0, math.rad(90)))
+			end
+		end
+	end
 end
 
 controlEvent.OnServerEvent:Connect(function(player, action, choice)
@@ -717,7 +759,7 @@ resetGame()
 local floor = Instance.new("Part")
 floor.Name = "ArenaFloor"
 floor.Anchored = true
-floor.Size = Vector3.new(80, 1, 80)
+floor.Size = Vector3.new(120, 1, 80)
 floor.Position = Vector3.new(0, -0.2, 0)
 floor.Material = Enum.Material.Slate
 floor.Color = Color3.fromRGB(28, 32, 42)
@@ -731,15 +773,39 @@ worldFolder.Parent = arena
 
 -- Dedicated walk-on pad for a true top-down chess-board view.
 -- The pad is adjacent to the board; stepping onto it switches only that player's camera.
-local chessViewPad = Instance.new("Part")
-chessViewPad.Name = "ChessTopDownViewPad"
-chessViewPad.Anchored = true
-chessViewPad.CanCollide = true
-chessViewPad.Size = Vector3.new(10, 0.6, 10)
-chessViewPad.Position = Vector3.new(24, 0.35, 0)
-chessViewPad.Material = Enum.Material.Neon
-chessViewPad.Color = Color3.fromRGB(64, 170, 125)
-chessViewPad.Parent = worldFolder
+local function makeChessViewPad(name, position, side)
+	local pad = Instance.new("Part")
+	pad.Name = name
+	pad.Anchored = true
+	pad.CanCollide = true
+	pad.Size = Vector3.new(8, 0.6, 8)
+	pad.Position = position
+	pad.Material = Enum.Material.Neon
+	pad.Color = side == "White" and Color3.fromRGB(64, 170, 125) or Color3.fromRGB(70, 125, 190)
+	pad:SetAttribute("BoardSide", side)
+	pad.Parent = worldFolder
+	local sign = Instance.new("BillboardGui")
+	sign.Name = "ChessViewSign"
+	sign.Size = UDim2.fromOffset(200, 48)
+	sign.StudsOffset = Vector3.new(0, 3.5, 0)
+	sign.AlwaysOnTop = true
+	sign.Parent = pad
+	local label = Instance.new("TextLabel")
+	label.Size = UDim2.fromScale(1, 1)
+	label.BackgroundColor3 = Color3.fromRGB(17, 22, 32)
+	label.BackgroundTransparency = 0.1
+	label.TextColor3 = Color3.fromRGB(245, 245, 245)
+	label.Font = Enum.Font.GothamBold
+	label.TextScaled = true
+	label.Text = side .. " • BOARD VIEW"
+	label.Parent = sign
+	local corner = Instance.new("UICorner")
+	corner.CornerRadius = UDim.new(0, 10)
+	corner.Parent = label
+	return pad
+end
+local chessViewPad = makeChessViewPad("WhiteChessViewPad", Vector3.new(0, 0.35, 24), "White")
+local blackChessViewPad = makeChessViewPad("BlackChessViewPad", Vector3.new(40, 0.35, 24), "Black")
 
 local chessViewSign = Instance.new("BillboardGui")
 chessViewSign.Name = "ChessViewSign"
@@ -761,13 +827,19 @@ signCorner.CornerRadius = UDim.new(0, 10)
 signCorner.Parent = chessViewText
 
 local viewCooldown = {}
-chessViewPad.Touched:Connect(function(hit)
-	local character = hit and hit:FindFirstAncestorOfClass("Model")
-	local player = character and Players:GetPlayerFromCharacter(character)
-	if not player or viewCooldown[player.UserId] then return end
-	viewCooldown[player.UserId] = true
-	controlEvent:FireClient(player, "ChessView", Vector3.new(0, 1, 0))
-	task.delay(2, function()
-		viewCooldown[player.UserId] = nil
+local function connectViewPad(pad)
+	pad.Touched:Connect(function(hit)
+		local character = hit and hit:FindFirstAncestorOfClass("Model")
+		local player = character and Players:GetPlayerFromCharacter(character)
+		if not player or viewCooldown[player.UserId] then return end
+		viewCooldown[player.UserId] = true
+		local side = pad:GetAttribute("BoardSide")
+		local center = side == "Black" and (Vector3.new(0, 1, 0) + SECOND_BOARD_OFFSET) or Vector3.new(0, 1, 0)
+		controlEvent:FireClient(player, "ChessView", { center = center, side = side })
+		task.delay(2, function()
+			viewCooldown[player.UserId] = nil
+		end)
 	end)
-end)
+end
+connectViewPad(chessViewPad)
+connectViewPad(blackChessViewPad)
