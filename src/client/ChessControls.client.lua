@@ -41,7 +41,7 @@ end
 local panel = Instance.new("Frame")
 panel.Name = "ControlPanel"
 panel.Position = UDim2.new(0, 20, 0, 20)
-panel.Size = UDim2.new(0, 300, 0, 286)
+panel.Size = UDim2.new(0, 300, 0, 352)
 panel.BackgroundColor3 = COLORS.panel
 panel.BackgroundTransparency = 0.04
 panel.BorderSizePixel = 0
@@ -138,6 +138,8 @@ local helpButton = makeButton("HelpButton", "♟  RULES", 12, 130, 86, COLORS.bl
 local deselectButton = makeButton("DeselectButton", "CANCEL", 106, 130, 82, Color3.fromRGB(69, 79, 96))
 local resetButton = makeButton("ResetButton", "NEW GAME", 196, 130, 92, COLORS.red)
 local botButton = makeButton("PlayBotButton", "PLAY VS BOT", 12, 220, 276, COLORS.green)
+local joinWhiteButton = makeButton("JoinWhiteTeamButton", "JOIN WHITE TEAM", 12, 264, 134, COLORS.blue)
+local joinBlackButton = makeButton("JoinBlackTeamButton", "JOIN BLACK TEAM", 154, 264, 134, COLORS.red)
 
 local tip = Instance.new("TextLabel")
 tip.Name = "Tip"
@@ -208,6 +210,87 @@ end)
 botButton.Activated:Connect(function()
 	controlEvent:FireServer("PlayBot")
 end)
+joinWhiteButton.Activated:Connect(function()
+	controlEvent:FireServer("JoinTeam", "White")
+end)
+joinBlackButton.Activated:Connect(function()
+	controlEvent:FireServer("JoinTeam", "Black")
+end)
+
+
+-- Team quiz: the first teammate to answer correctly earns the right to decide this move.
+local quizPanel = Instance.new("Frame")
+quizPanel.Name = "TeamMoveQuiz"
+quizPanel.AnchorPoint = Vector2.new(0.5, 0.5)
+quizPanel.Position = UDim2.fromScale(0.5, 0.5)
+quizPanel.Size = UDim2.new(0, 420, 0, 270)
+quizPanel.BackgroundColor3 = COLORS.panel
+quizPanel.BorderSizePixel = 0
+quizPanel.Visible = false
+quizPanel.ZIndex = 30
+quizPanel.Parent = gui
+round(quizPanel, 16)
+stroke(quizPanel, COLORS.gold, 0.1)
+
+local quizTitle = Instance.new("TextLabel")
+quizTitle.Position = UDim2.new(0, 16, 0, 12)
+quizTitle.Size = UDim2.new(1, -32, 0, 28)
+quizTitle.BackgroundTransparency = 1
+quizTitle.Text = "TEAM MOVE CHALLENGE"
+quizTitle.TextColor3 = COLORS.gold
+quizTitle.Font = Enum.Font.GothamBlack
+quizTitle.TextSize = 18
+quizTitle.ZIndex = 31
+quizTitle.Parent = quizPanel
+
+local quizQuestion = Instance.new("TextLabel")
+quizQuestion.Position = UDim2.new(0, 16, 0, 46)
+quizQuestion.Size = UDim2.new(1, -32, 0, 54)
+quizQuestion.BackgroundTransparency = 1
+quizQuestion.Text = "Answer correctly to decide the next move."
+quizQuestion.TextColor3 = COLORS.text
+quizQuestion.Font = Enum.Font.GothamBold
+quizQuestion.TextSize = 15
+quizQuestion.TextWrapped = true
+quizQuestion.ZIndex = 31
+quizQuestion.Parent = quizPanel
+
+local quizFeedback = Instance.new("TextLabel")
+quizFeedback.Position = UDim2.new(0, 16, 1, -30)
+quizFeedback.Size = UDim2.new(1, -32, 0, 20)
+quizFeedback.BackgroundTransparency = 1
+quizFeedback.Text = "First correct teammate wins."
+quizFeedback.TextColor3 = COLORS.muted
+quizFeedback.Font = Enum.Font.Gotham
+quizFeedback.TextSize = 12
+quizFeedback.ZIndex = 31
+quizFeedback.Parent = quizPanel
+
+local quizButtons = {}
+local activeQuizId = nil
+for index = 1, 4 do
+	local button = Instance.new("TextButton")
+	button.Name = "Answer" .. index
+	button.Position = UDim2.new(0, 16 + ((index - 1) % 2) * 196, 0, 112 + math.floor((index - 1) / 2) * 54)
+	button.Size = UDim2.new(0, 184, 0, 44)
+	button.BackgroundColor3 = COLORS.panel2
+	button.BorderSizePixel = 0
+	button.Text = "Answer " .. index
+	button.TextColor3 = COLORS.text
+	button.Font = Enum.Font.GothamBold
+	button.TextSize = 13
+	button.TextWrapped = true
+	button.ZIndex = 31
+	button.Parent = quizPanel
+	round(button, 9)
+	button.Activated:Connect(function()
+		if activeQuizId then
+			controlEvent:FireServer("TeamAnswer", index)
+			quizFeedback.Text = "Answer submitted…"
+		end
+	end)
+	quizButtons[index] = button
+end
 
 local promotionPanel = Instance.new("Frame")
 promotionPanel.Name = "PromotionChoice"
@@ -317,6 +400,29 @@ end
 exitTelescope.Activated:Connect(stopTelescope)
 
 controlEvent.OnClientEvent:Connect(function(action, payload, fromRow, fromCol)
+	if action == "TeamQuiz" then
+		activeQuizId = payload.id
+		quizTitle.Text = tostring(payload.side) .. " TEAM • WIN THE MOVE"
+		quizQuestion.Text = tostring(payload.question)
+		quizFeedback.Text = "First correct teammate wins. You have " .. tostring(payload.seconds or 20) .. " seconds."
+		for index, button in ipairs(quizButtons) do
+			button.Visible = payload.options[index] ~= nil
+			button.Text = tostring(payload.options[index] or "")
+			button.Active = true
+			button.AutoButtonColor = true
+		end
+		quizPanel.Visible = true
+	elseif action == "TeamQuizHide" then
+		activeQuizId = nil
+		quizPanel.Visible = false
+	elseif action == "TeamQuizFeedback" then
+		quizFeedback.Text = tostring(select(2, payload, fromRow) or fromRow or "")
+		if payload == true then
+			quizFeedback.TextColor3 = COLORS.green
+		else
+			quizFeedback.TextColor3 = COLORS.red
+		end
+	end
 	if action == "Telescope" or action == "ChessView" then
 		camera = workspace.CurrentCamera
 		if camera then
