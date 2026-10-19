@@ -699,6 +699,7 @@ controlEvent.OnServerEvent:Connect(function(player, action, choice)
 			playerSides[player.UserId] = "White"
 			hostUserId = player.UserId
 			resetGame()
+			controlEvent:FireClient(player, "ChessView", { center = Vector3.new(0, 1, 0), side = "White" })
 			controlEvent:FireClient(player, "Status", "Practice vs Bot — you are White. Select a piece, then a green square.")
 		else
 			controlEvent:FireClient(player, "Status", "This shared board is in use. Wait for a seat to open.")
