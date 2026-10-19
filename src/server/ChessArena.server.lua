@@ -60,6 +60,7 @@ local occupancy = {}
 local currentTurn = "White"
 local selectedPiece = nil
 local selectedTile = nil
+local tryMove
 
 local WHITE = Color3.fromRGB(238, 232, 218)
 local BLACK = Color3.fromRGB(65, 75, 91)
@@ -214,7 +215,9 @@ local function makePiece(pieceType, side, row, col)
 	click.MaxActivationDistance = 80
 	click.Parent = base
 	click.MouseClick:Connect(function(player)
-		if model.Parent and occupancy[key(row, col)] == model then
+		local currentRow = model:GetAttribute("Row")
+		local currentCol = model:GetAttribute("Col")
+		if model.Parent and occupancy[key(currentRow, currentCol)] == model then
 			if model:GetAttribute("Side") == currentTurn then
 				if selectedPiece == model then
 					selectedPiece = nil
@@ -227,7 +230,7 @@ local function makePiece(pieceType, side, row, col)
 				-- Clicking an opposing piece attempts to capture it on its square.
 				local targetRow = model:GetAttribute("Row")
 				local targetCol = model:GetAttribute("Col")
-				_G.YUGATNEOChessTryMove(targetRow, targetCol)
+				tryMove(targetRow, targetCol)
 			end
 		end
 	end)
@@ -256,7 +259,7 @@ for row = 1, 8 do
 		click.Parent = tile
 		click.MouseClick:Connect(function(player)
 			if selectedPiece then
-				_G.YUGATNEOChessTryMove(row, col)
+				tryMove(row, col)
 			end
 		end)
 	end
@@ -316,7 +319,7 @@ local function isValidMove(piece, toRow, toCol)
 	return false
 end
 
-local function tryMove(toRow, toCol)
+tryMove = function(toRow, toCol)
 	if not selectedPiece or not selectedPiece.Parent then
 		selectedPiece = nil
 		return
@@ -347,8 +350,6 @@ local function tryMove(toRow, toCol)
 	currentTurn = currentTurn == "White" and "Black" or "White"
 	setStatus(currentTurn .. " to move")
 end
-
-_G.YUGATNEOChessTryMove = tryMove
 
 local backRank = {"Rook", "Knight", "Bishop", "Queen", "King", "Bishop", "Knight", "Rook"}
 for col = 1, 8 do
