@@ -208,13 +208,9 @@ local function makePiece(pieceType, side, row, col)
 	end
 
 	model.Parent = piecesFolder
-	model:PivotTo(CFrame.new(squarePosition(row, col, PIECE_Y)))
 	occupancy[key(row, col)] = model
 
-	local click = Instance.new("ClickDetector")
-	click.MaxActivationDistance = 80
-	click.Parent = base
-	click.MouseClick:Connect(function(player)
+	local function onPieceClicked(player)
 		local currentRow = model:GetAttribute("Row")
 		local currentCol = model:GetAttribute("Col")
 		if model.Parent and occupancy[key(currentRow, currentCol)] == model then
@@ -228,12 +224,20 @@ local function makePiece(pieceType, side, row, col)
 				end
 			elseif selectedPiece then
 				-- Clicking an opposing piece attempts to capture it on its square.
-				local targetRow = model:GetAttribute("Row")
-				local targetCol = model:GetAttribute("Col")
-				tryMove(targetRow, targetCol)
+				tryMove(currentRow, currentCol)
 			end
 		end
-	end)
+	end
+
+	-- Attach a detector to every visible part so the upper shape is clickable too.
+	for _, descendant in ipairs(model:GetChildren()) do
+		if descendant:IsA("BasePart") then
+			local click = Instance.new("ClickDetector")
+			click.MaxActivationDistance = 80
+			click.Parent = descendant
+			click.MouseClick:Connect(onPieceClicked)
+		end
+	end
 
 	return model
 end
