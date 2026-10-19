@@ -1,33 +1,50 @@
 # YUGATNEO Roblox — Chess Arena
 
-A Roblox Studio chess prototype for the YUGATNEO world.
+A Roblox Studio chess game prototype for the YUGATNEO world. The active development branch `feature/full-chess-game` adds a server-side rules engine and a redesigned in-game HUD.
 
-## Included
-- Automatically generated 8×8 chessboard and 32 starting pieces.
-- Distinct piece silhouettes plus a letter badge: P (pawn), R (rook), N (knight), B (bishop), Q (queen), K (king).
-- Click a piece, then click a destination square to move it.
-- Turn-based play for White and Black.
-- Captures and basic movement rules for all six piece types.
-- On-screen controls: instructions, cancel selection, and reset/new game.
-- Server-side move validation for basic piece movement.
+## Included in this development branch
 
-## Prototype limitations
-This is not yet a complete tournament chess implementation. Check/checkmate validation, castling, en passant, pawn promotion, separate simultaneous matches, matchmaking, persistent ratings, and spectator tools are not implemented yet. The reset button restarts the shared board for everyone in the server.
+- Generated 8×8 board and 32 starting pieces.
+- Distinct 3D piece silhouettes and readable piece badges.
+- Click a piece to highlight legal destination squares, then click a destination to move.
+- Server-authoritative legal move validation.
+- Turn order, captures, king-safety checks, check, checkmate, and stalemate.
+- Castling, en passant, and pawn promotion (currently auto-promotes to a queen).
+- Modern dark HUD with gold accents, live status, move hints, rules panel, cancel selection, and new-game control.
 
-## Run in Roblox Studio (manual setup)
-1. Open Roblox Studio and create a **Baseplate** experience.
-2. In **ServerScriptService**, create a **Script** named `ChessArena`; paste in `src/server/ChessArena.server.lua`.
-3. In **StarterPlayer > StarterPlayerScripts**, create a **LocalScript** named `ChessControls`; paste in `src/client/ChessControls.client.lua`.
-4. Press **Play**. The server generates the board and pieces, and the client script adds the control panel.
+## Important implementation notes
 
-Both scripts are required for the on-screen controls. If you only install the server script, the board and pieces will appear but the control panel will not.
+- The current server creates one shared board for everyone in the server; it is not yet a matchmaking system with independent boards.
+- Promotion currently defaults to a queen. A player choice menu is a follow-up improvement.
+- Draw handling for threefold repetition, the fifty-move rule, and insufficient material is not implemented yet.
+- Automated tests and live Roblox Studio verification are still required before treating the rules engine as tournament-ready.
 
-## GitHub, Rojo, and publishing
-The `default.project.json` maps both scripts into Roblox services. For live sync, install Rojo and its Studio plugin, clone this repository locally, then run `rojo serve` and connect the plugin in Studio. GitHub changes reach Studio after you pull them into the local checkout; GitHub does not directly connect to your running Studio session.
+## Run in Roblox Studio
 
-The GitHub Actions workflow `.github/workflows/roblox-ci.yml` builds the place on pushes and pull requests. It can also publish manually to Roblox when you run the workflow with publishing enabled and configure `ROBLOX_API_KEY`, `ROBLOX_UNIVERSE_ID`, and `ROBLOX_PLACE_ID` in GitHub Actions secrets. Publishing is intentionally manual by default. See [the full setup guide](docs/ROBLOX_GITHUB_SYNC.md).
+1. Open this repository folder on your Mac.
+2. In Terminal, run `rojo serve default.project.json`.
+3. Open Roblox Studio and connect the Rojo plugin to `localhost:34872`.
+4. Press **Play**.
+5. In Explorer, check `ServerScriptService/ChessEngine`, `ServerScriptService/ChessArena`, and `StarterPlayer/StarterPlayerScripts/ChessControls`.
 
-## Project files
-- `src/server/ChessArena.server.lua` — server-side board, piece generation, turn handling, captures, and basic move validation.
-- `src/client/ChessControls.client.lua` — on-screen buttons and player instructions.
-- `default.project.json` — Rojo project mapping.
+If Rojo is already running on port 34872, do not launch a second server. Use the existing Terminal window or stop the old process deliberately before restarting.
+
+## GitHub and branches
+
+The feature is being developed on `feature/full-chess-game`; `main` remains unchanged while the new rules and UI are reviewed. To test this branch locally:
+
+```bash
+git fetch origin
+git switch feature/full-chess-game
+git pull
+```
+
+Then reconnect Rojo if needed. GitHub changes do not appear in Studio until the local checkout has been updated.
+
+## Files
+
+- `src/server/ChessEngine.lua` — chess movement, attack detection, legal move filtering, check/checkmate/stalemate, castling, en passant, promotion.
+- `src/server/ChessArena.server.lua` — board and piece rendering, server-side interaction, status, reset.
+- `src/client/ChessControls.client.lua` — in-game HUD, rules panel, status, legal-move highlighting.
+- `default.project.json` — Rojo mapping.
+- `docs/ROBLOX_GITHUB_SYNC.md` — synchronization and publishing guide.
