@@ -43,3 +43,19 @@ This checklist is required before treating the prototype as tournament-ready. Th
 - [ ] Joining a full team (3 players) is rejected; players cannot join both teams or switch teams during the match.
 - [ ] Resetting during a quiz clears the quiz and leaves no stale selection.
 - [ ] Test White team and Black team independently, including after check, captures, promotion, and game end.
+
+
+## Mouse input regression
+- [ ] In top-down camera mode, click the visible upper body of a White piece; it is selected and the origin square turns gold.
+- [ ] Click a green destination square; the piece moves and turn/status updates.
+- [ ] Click the same piece twice to cancel selection.
+- [ ] Click an enemy piece on a legal capture square to capture it.
+- [ ] Click a piece while too far away to trigger any ClickDetector; selection still works from the top-down board view.
+- [ ] Click outside the board (desk, computer, phone booth, world props); no chess selection or move occurs.
+- [ ] Send malformed row/column values through a client test; server rejects them without changing state.
+
+## Study-area props
+- [ ] Computer desk, monitor, keyboard and display spawn to the side of the board without obstructing squares.
+- [ ] Computer prompt displays its informational status.
+- [ ] Phone booth, glass walls, sign, telephone body, keypad and handset spawn.
+- [ ] Phone prompt displays its informational status.
