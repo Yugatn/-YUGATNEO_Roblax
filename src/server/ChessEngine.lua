@@ -16,6 +16,26 @@ local function other(side)
 	return side == "White" and "Black" or "White"
 end
 
+local function positionKey(state)
+	local codes = { Pawn = "p", Knight = "n", Bishop = "b", Rook = "r", Queen = "q", King = "k" }
+	local parts = {}
+	for row = 1, 8 do
+		for col = 1, 8 do
+			local piece = state.board[row][col]
+			if piece then
+				local code = codes[piece.type] or "?"
+				if piece.side == "White" then code = string.upper(code) end
+				table.insert(parts, code .. tostring(row) .. tostring(col))
+			end
+		end
+	end
+	local rights = state.castling
+	local castlingKey = (rights.White.kingSide and "K" or "") .. (rights.White.queenSide and "Q" or "")
+		.. (rights.Black.kingSide and "k" or "") .. (rights.Black.queenSide and "q" or "")
+	local ep = state.enPassant and (tostring(state.enPassant.row) .. tostring(state.enPassant.col)) or "-"
+	return table.concat(parts, ",") .. "|" .. state.turn .. "|" .. castlingKey .. "|" .. ep
+end
+
 local function cloneState(state)
 	local copy = {
 		board = {},
@@ -27,6 +47,7 @@ local function cloneState(state)
 		},
 		halfMove = state.halfMove or 0,
 		fullMove = state.fullMove or 1,
+		positionCounts = {},
 	}
 	for row = 1, 8 do
 		copy.board[row] = {}
@@ -34,6 +55,9 @@ local function cloneState(state)
 			local p = state.board[row][col]
 			copy.board[row][col] = p and { type = p.type, side = p.side, moved = p.moved } or nil
 		end
+	end
+	for key, count in pairs(state.positionCounts or {}) do
+		copy.positionCounts[key] = count
 	end
 	return copy
 end
@@ -83,6 +107,7 @@ function ChessEngine.newGame()
 		state.board[7][col] = { type = "Pawn", side = "Black", moved = false }
 		state.board[8][col] = { type = back[col], side = "Black", moved = false }
 	end
+	state.positionCounts = { [positionKey(state)] = 1 }
 	return state
 end
 
@@ -305,6 +330,9 @@ function ChessEngine.move(state, fromRow, fromCol, toRow, toCol, promotion)
 		return false, "Choose Queen, Rook, Bishop, or Knight for promotion"
 	end
 	local captured = applyMoveUnchecked(state, fromRow, fromCol, chosen, promotion)
+	local key = positionKey(state)
+	state.positionCounts = state.positionCounts or {}
+	state.positionCounts[key] = (state.positionCounts[key] or 0) + 1
 	local status = ChessEngine.status(state)
 	return true, status, captured, chosen
 end
@@ -325,13 +353,50 @@ function ChessEngine.allLegalMoves(state, side)
 	return moves
 end
 
+local function insufficientMaterial(state)
+	local nonKings = {}
+	local bishopsBySquareColor = {}
+	for row = 1, 8 do
+		for col = 1, 8 do
+			local piece = state.board[row][col]
+			if piece and piece.type ~= "King" then
+				table.insert(nonKings, piece)
+				if piece.type == "Bishop" then
+					table.insert(bishopsBySquareColor, (row + col) % 2)
+				end
+			end
+		end
+	end
+	if #nonKings == 0 then return true end
+	if #nonKings == 1 and (nonKings[1].type == "Bishop" or nonKings[1].type == "Knight") then return true end
+	if #nonKings == #bishopsBySquareColor and #bishopsBySquareColor > 0 then
+		local color = bishopsBySquareColor[1]
+		for _, otherColor in ipairs(bishopsBySquareColor) do
+			if otherColor ~= color then return false end
+		end
+		return true
+	end
+	return false
+end
+
 function ChessEngine.status(state)
 	local side = state.turn
 	local check = ChessEngine.inCheck(state, side)
 	local moves = ChessEngine.allLegalMoves(state, side)
+	-- Checkmate and stalemate take precedence over automatic draw counters.
 	if #moves == 0 then
 		if check then return { text = "Checkmate — " .. other(side) .. " wins", check = true, checkmate = true, stalemate = false, winner = other(side), gameOver = true } end
-		return { text = "Stalemate — draw", check = false, checkmate = false, stalemate = true, gameOver = true }
+		return { text = "Stalemate — draw", check = false, checkmate = false, stalemate = true, gameOver = true, drawReason = "stalemate" }
+	end
+	local currentKey = positionKey(state)
+	if (state.positionCounts and state.positionCounts[currentKey] or 0) >= 3 then
+		return { text = "Draw — threefold repetition", check = check, checkmate = false, stalemate = false, gameOver = true, drawReason = "threefold repetition" }
+	end
+	if (state.halfMove or 0) >= 100 then
+		return { text = "Draw — fifty-move rule", check = check, checkmate = false, stalemate = false, gameOver = true, drawReason = "fifty-move rule" }
+	end
+	if insufficientMaterial(state) then
+		return { text = "Draw — insufficient material", check = check, checkmate = false, stalemate = false, gameOver = true, drawReason = "insufficient material" }
 	end
 	if check then return { text = side .. " is in check", check = true, checkmate = false, stalemate = false, gameOver = false } end
 	return { text = side .. " to move", check = false, checkmate = false, stalemate = false, gameOver = false }
