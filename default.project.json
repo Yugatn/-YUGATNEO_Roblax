@@ -7,6 +7,15 @@
       "ChessArena": {
         "$path": "src/server/ChessArena.server.lua"
       }
+    },
+    "StarterPlayer": {
+      "$className": "StarterPlayer",
+      "StarterPlayerScripts": {
+        "$className": "StarterPlayerScripts",
+        "ChessControls": {
+          "$path": "src/client/ChessControls.client.lua"
+        }
+      }
     }
   }
 }
