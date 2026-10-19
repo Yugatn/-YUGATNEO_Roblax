@@ -306,14 +306,20 @@ end
 exitTelescope.Activated:Connect(stopTelescope)
 
 controlEvent.OnClientEvent:Connect(function(action, payload, fromRow, fromCol)
-	if action == "Telescope" then
+	if action == "Telescope" or action == "ChessView" then
 		camera = workspace.CurrentCamera
 		if camera then
 			previousCameraType = camera.CameraType
 			previousCameraSubject = camera.CameraSubject
 			previousCameraCFrame = camera.CFrame
 			camera.CameraType = Enum.CameraType.Scriptable
-			camera.CFrame = CFrame.lookAt(payload + Vector3.new(0, 2, 1), Vector3.new(0, 2, 0))
+			if action == "ChessView" then
+				telescopeLabel.Text = "CHESS BOARD • TOP VIEW"
+				camera.CFrame = CFrame.lookAt(payload + Vector3.new(0, 48, 0), payload)
+			else
+				telescopeLabel.Text = "OBSERVATORY • telescope view"
+				camera.CFrame = CFrame.lookAt(payload + Vector3.new(0, 2, 1), Vector3.new(0, 2, 0))
+			end
 			telescopeOverlay.Visible = true
 		end
 	elseif action == "SeatAssigned" then
