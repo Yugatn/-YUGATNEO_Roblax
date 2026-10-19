@@ -67,7 +67,7 @@ This checklist is required before treating the prototype as tournament-ready. Th
 - [ ] Click the same piece twice to cancel selection.
 - [ ] Click an enemy piece on a legal capture square to capture it.
 - [ ] Click a piece while too far away to trigger any ClickDetector; selection still works from the top-down board view.
-- [ ] Click outside both boards; no chess selection or move occurs.
+- [ ] Click outside the single board; no chess selection or move occurs.
 - [ ] Send malformed row/column values through a client test; server rejects them without changing state.
 
 ## Automated engine smoke test
@@ -77,7 +77,7 @@ This checklist is required before treating the prototype as tournament-ready. Th
 - [ ] Remove the temporary test Script after the run.
 
 ## Raycast interaction
-- [ ] Enter either Chess Board view, click a piece, and verify the origin square turns gold and legal destinations turn green on both boards.
+- [ ] Enter either player field's board view, click a piece, and verify the origin square turns gold and legal destinations turn green on the single board.
 - [ ] Click a green square; verify the piece moves, turn changes, and the bot replies in bot mode.
 - [ ] Click the board while it is the opponent's turn; the player receives a clear status message rather than a silent failure.
 - [ ] Click the avatar and empty world; neither should be treated as a chess square.
