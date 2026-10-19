@@ -264,7 +264,7 @@ local function getTileColor(row, col)
 end
 
 local camera = workspace.CurrentCamera
-local previousCameraType, previousCameraSubject, previousCameraCFrame
+local previousCameraType, previousCameraSubject, previousCameraCFrame, previousCameraFOV
 local telescopeOverlay = Instance.new("Frame")
 telescopeOverlay.Name = "TelescopeOverlay"
 telescopeOverlay.AnchorPoint = Vector2.new(0.5, 0)
@@ -306,6 +306,7 @@ local function releaseCamera()
 		camera.CameraType = previousCameraType or Enum.CameraType.Custom
 		camera.CameraSubject = previousCameraSubject or (player.Character and player.Character:FindFirstChildOfClass("Humanoid"))
 		if previousCameraCFrame then camera.CFrame = previousCameraCFrame end
+		if previousCameraFOV then camera.FieldOfView = previousCameraFOV end
 	end
 end
 
@@ -324,6 +325,7 @@ controlEvent.OnClientEvent:Connect(function(action, payload, fromRow, fromCol)
 				previousCameraType = camera.CameraType
 				previousCameraSubject = camera.CameraSubject
 				previousCameraCFrame = camera.CFrame
+				previousCameraFOV = camera.FieldOfView
 			end
 			camera.CameraType = Enum.CameraType.Scriptable
 			if action == "ChessView" then
