@@ -1,0 +1,12 @@
+{
+  "name": "YUGATNEO_Roblox",
+  "tree": {
+    "$className": "DataModel",
+    "ServerScriptService": {
+      "$className": "ServerScriptService",
+      "ChessArena": {
+        "$path": "src/server/ChessArena.server.lua"
+      }
+    }
+  }
+}
