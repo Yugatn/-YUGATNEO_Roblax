@@ -59,3 +59,17 @@ This checklist is required before treating the prototype as tournament-ready. Th
 - [ ] Computer prompt displays its informational status.
 - [ ] Phone booth, glass walls, sign, telephone body, keypad and handset spawn.
 - [ ] Phone prompt displays its informational status.
+
+
+## Automated engine smoke test
+- [ ] Copy `tests/ChessEngineSmokeTest.lua` into a temporary Script under ServerScriptService.
+- [ ] Run Play and confirm Output reports perft depth 1 = 20, depth 2 = 400, and depth 3 = 8902.
+- [ ] Confirm the state-copy test leaves the original turn unchanged.
+- [ ] Remove the temporary test Script after the run.
+
+## Raycast interaction
+- [ ] Enter the Chess Board view, click the upper visible surface of a piece, and verify the origin square turns gold and legal destinations turn green.
+- [ ] Click a green square; verify the piece moves, turn changes, and the bot replies in bot mode.
+- [ ] Click the board while it is the opponent's turn; the player receives a clear status message rather than a silent failure.
+- [ ] Click the computer monitor, phone booth, avatar, and empty world; none should be treated as a chess square.
+- [ ] Test on a wide desktop viewport and a narrow viewport to check screen-coordinate raycasting.
