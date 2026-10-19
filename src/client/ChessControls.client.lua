@@ -81,7 +81,7 @@ local subtitle = Instance.new("TextLabel")
 subtitle.Position = UDim2.new(0, 17, 0, 32)
 subtitle.Size = UDim2.new(1, -34, 0, 16)
 subtitle.BackgroundTransparency = 1
-subtitle.Text = "CLASSIC CHESS • TWO BOARDS • SHARED MATCH"
+subtitle.Text = "CLASSIC CHESS • ONE BOARD • TWO PLAYER FIELDS"
 subtitle.TextColor3 = COLORS.muted
 subtitle.Font = Enum.Font.GothamMedium
 subtitle.TextSize = 9
@@ -148,7 +148,7 @@ tip.Name = "Tip"
 tip.Position = UDim2.new(0, 14, 0, 176)
 tip.Size = UDim2.new(1, -28, 0, 42)
 tip.BackgroundTransparency = 1
-tip.Text = "1) Click PLAY VS BOT.  2) Select a piece.\n3) Click a green square to move."
+tip.Text = "1) Stand on White or Black field.\n2) Select a piece, then a green square."
 tip.TextColor3 = COLORS.muted
 tip.Font = Enum.Font.Gotham
 tip.TextSize = 11
@@ -183,7 +183,7 @@ local helpText = Instance.new("TextLabel")
 helpText.Position = UDim2.new(0, 14, 0, 44)
 helpText.Size = UDim2.new(1, -28, 1, -92)
 helpText.BackgroundTransparency = 1
-helpText.Text = "HOW TO START\n1. Press PLAY VS BOT. You play White.\n2. Click one of your light pieces.\n3. Green squares are legal moves. Click one.\n4. The bot replies as Black.\n\nPAWN: forward, captures diagonally.\nROOK: straight lines. BISHOP: diagonals.\nQUEEN: straight + diagonal. KNIGHT: L-shape.\nKING: one square; keep it safe.\n\nGoal: checkmate the enemy king."
+helpText.Text = "HOW TO START\n1. Stand on the White or Black field to join.\n2. Or press PLAY VS BOT to practise as White.\n3. Click one of your pieces.\n4. Green squares are legal moves. Click one.\n4. The bot replies as Black.\n\nPAWN: forward, captures diagonally.\nROOK: straight lines. BISHOP: diagonals.\nQUEEN: straight + diagonal. KNIGHT: L-shape.\nKING: one square; keep it safe.\n\nGoal: checkmate the enemy king."
 helpText.TextColor3 = COLORS.text
 helpText.Font = Enum.Font.Gotham
 helpText.TextSize = 12
@@ -213,10 +213,10 @@ botButton.Activated:Connect(function()
 	controlEvent:FireServer("PlayBot")
 end)
 joinWhiteButton.Activated:Connect(function()
-	controlEvent:FireServer("JoinTeam", "White")
+	controlEvent:FireServer("JoinField", "White")
 end)
 joinBlackButton.Activated:Connect(function()
-	controlEvent:FireServer("JoinTeam", "Black")
+	controlEvent:FireServer("JoinField", "Black")
 end)
 claimDrawButton.Activated:Connect(function()
 	controlEvent:FireServer("ClaimDraw")
@@ -446,7 +446,7 @@ controlEvent.OnClientEvent:Connect(function(action, payload, fromRow, fromCol)
 			local verticalFov = math.rad(55)
 			local requiredDistance = (boardSpan / 2) / math.tan(verticalFov / 2)
 			local height = math.max(34, requiredDistance * 0.78)
-			local depth = math.max(18, height * 0.48) * (side == "White" and -1 or 1)
+			local depth = math.max(18, height * 0.48) * (side == "White" and 1 or -1)
 			activeChessCameraCFrame = CFrame.lookAt(target + Vector3.new(0, height, depth), target)
 			camera.FieldOfView = 55
 			RunService:UnbindFromRenderStep(CAMERA_BIND_NAME)
@@ -490,9 +490,7 @@ controlEvent.OnClientEvent:Connect(function(action, payload, fromRow, fromCol)
 		local boards = {}
 		if arena then
 			local whiteBoard = arena:FindFirstChild("Board")
-			local blackBoard = arena:FindFirstChild("BlackBoard")
 			if whiteBoard then table.insert(boards, whiteBoard) end
-			if blackBoard then table.insert(boards, blackBoard) end
 		end
 		if #boards == 0 then return end
 		for _, board in ipairs(boards) do
@@ -553,7 +551,7 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
 		if distance <= 0 then return end
 		local point = unitRay.Origin + direction * distance
 		local boardCenterX
-		for _, centerX in ipairs({ 0, 40 }) do
+		for _, centerX in ipairs({ 0 }) do
 			if point.X >= centerX - 16 and point.X < centerX + 16
 				and point.Z >= -16 and point.Z < 16 then
 				boardCenterX = centerX
