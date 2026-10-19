@@ -692,6 +692,15 @@ controlEvent.OnServerEvent:Connect(function(player, action, choice)
 		end
 	elseif action == "PlayBot" then
 		if playerSides[player.UserId] == "White" or not seatPlayers.White or seatPlayers.White == player.UserId then
+			-- Bot practice owns Black exclusively; any previously seated human is moved to spectator.
+			for userId in pairs(teamMembers.Black) do
+				local formerBlack = Players:GetPlayerByUserId(userId)
+				if formerBlack and userId ~= player.UserId then
+					playerSides[userId] = nil
+					controlEvent:FireClient(formerBlack, "SeatAssigned", "Spectator")
+				end
+			end
+			table.clear(teamMembers.Black)
 			botEnabled = true
 			playerSides[-1] = "Black"
 			seatPlayers.White = player.UserId
@@ -807,25 +816,6 @@ local function makeChessViewPad(name, position, side)
 end
 local chessViewPad = makeChessViewPad("WhiteChessViewPad", Vector3.new(0, 0.35, 24), "White")
 local blackChessViewPad = makeChessViewPad("BlackChessViewPad", Vector3.new(40, 0.35, 24), "Black")
-
-local chessViewSign = Instance.new("BillboardGui")
-chessViewSign.Name = "ChessViewSign"
-chessViewSign.Size = UDim2.fromOffset(220, 54)
-chessViewSign.StudsOffset = Vector3.new(0, 3.5, 0)
-chessViewSign.AlwaysOnTop = true
-chessViewSign.Parent = chessViewPad
-local chessViewText = Instance.new("TextLabel")
-chessViewText.Size = UDim2.fromScale(1, 1)
-chessViewText.BackgroundColor3 = Color3.fromRGB(17, 22, 32)
-chessViewText.BackgroundTransparency = 0.1
-chessViewText.TextColor3 = Color3.fromRGB(245, 245, 245)
-chessViewText.Font = Enum.Font.GothamBold
-chessViewText.TextScaled = true
-chessViewText.Text = "STEP HERE • CHESS VIEW"
-chessViewText.Parent = chessViewSign
-local signCorner = Instance.new("UICorner")
-signCorner.CornerRadius = UDim.new(0, 10)
-signCorner.Parent = chessViewText
 
 local viewCooldown = {}
 local function connectViewPad(pad)
