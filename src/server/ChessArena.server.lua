@@ -70,6 +70,9 @@ local pendingPromotion = nil
 local pendingPromotionUserId = nil
 local selectedByUserId = nil
 local gameOver = false
+local botEnabled = false
+local botThinking = false
+local botMove
 local tryMove
 
 -- This prototype has one shared board. Only the two seated players may move:
@@ -459,11 +462,50 @@ tryMove = function(toRow, toCol, promotionChoice, player)
 	local status = ChessEngine.status(engineState)
 	gameOver = status.gameOver
 	setStatus(status.text)
+	if botEnabled and currentTurn == "Black" and not gameOver then
+		task.delay(0.6, function()
+			if botMove and botEnabled and currentTurn == "Black" and not gameOver then
+				botMove()
+			end
+		end)
+	end
+end
+
+botMove = function()
+	if botThinking or not botEnabled or gameOver or currentTurn ~= "Black" then return end
+	botThinking = true
+	local candidates = ChessEngine.allLegalMoves(engineState, "Black")
+	if #candidates == 0 then botThinking = false; return end
+	local bestScore = -math.huge
+	local bestMoves = {}
+	local values = { Pawn = 1, Knight = 3, Bishop = 3.2, Rook = 5, Queen = 9, King = 100 }
+	for _, candidate in ipairs(candidates) do
+		local moving = engineState.board[candidate.fromRow][candidate.fromCol]
+		local target = engineState.board[candidate.row][candidate.col]
+		local score = math.random() * 0.3
+		if target then score += 1.5 + (values[target.type] or 0) * 0.9 - (values[moving.type] or 1) * 0.04 end
+		if moving.type == "Pawn" and (candidate.row == 1 or candidate.row == 8) then score += 8 end
+		local simulated = ChessEngine.copy(engineState)
+		ChessEngine.move(simulated, candidate.fromRow, candidate.fromCol, candidate.row, candidate.col, "Queen")
+		if ChessEngine.inCheck(simulated, "White") then score += 1.25 end
+		if ChessEngine.inCheck(simulated, "Black") then score -= 1.5 end
+		if score > bestScore then bestScore = score; bestMoves = { candidate }
+		elseif score >= bestScore - 0.25 then table.insert(bestMoves, candidate) end
+	end
+	local chosen = bestMoves[math.random(1, #bestMoves)]
+	local model = occupancy[key(chosen.fromRow, chosen.fromCol)]
+	if model then
+		selectedPiece = model
+		selectedByUserId = -1
+		tryMove(chosen.row, chosen.col, "Queen", { UserId = -1 })
+	end
+	botThinking = false
 end
 
 local backRank = {"Rook", "Knight", "Bishop", "Queen", "King", "Bishop", "Knight", "Rook"}
 
 local function resetGame()
+	botThinking = false
 	piecesFolder:ClearAllChildren()
 	table.clear(occupancy)
 	selectedPiece = nil
@@ -483,7 +525,18 @@ local function resetGame()
 end
 
 controlEvent.OnServerEvent:Connect(function(player, action, choice)
-	if action == "Promote" then
+	if action == "PlayBot" then
+		if seatPlayers.White ~= player.UserId or (seatPlayers.Black ~= nil and seatPlayers.Black ~= -1) then
+			controlEvent:FireClient(player, "Status", "Practice mode is available when you have the White seat and no human opponent is seated.")
+			return
+		end
+		botEnabled = true
+		playerSides[-1] = "Black"
+		seatPlayers.Black = -1
+		hostUserId = player.UserId
+		resetGame()
+		controlEvent:FireClient(player, "Status", "Practice vs Bot — you are White. Select a piece, then a green square.")
+	elseif action == "Promote" then
 		if pendingPromotion and selectedPiece and pendingPromotionUserId == player.UserId and selectedByUserId == player.UserId then
 			local pending = pendingPromotion
 			pendingPromotion = nil
@@ -520,5 +573,5 @@ floor.Material = Enum.Material.Slate
 floor.Color = Color3.fromRGB(28, 32, 42)
 floor.Parent = arena
 
-setStatus("White to move")
+setStatus("White to move | Press PLAY VS BOT to practise alone")
 print("YUGATNEO Chess Arena loaded: board, labelled pieces, and game controls created.")
