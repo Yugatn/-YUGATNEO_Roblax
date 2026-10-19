@@ -362,15 +362,15 @@ local function makePiece(pieceType, side, row, col)
 		local currentCol = model:GetAttribute("Col")
 		if model.Parent and occupancy[key(currentRow, currentCol)] == model then
 			if model:GetAttribute("Side") == currentTurn then
-				if startTeamQuiz(currentTurn, currentRow, currentCol, pieceType) then
-					return
-				end
-				if selectedPiece == model then
+				if selectedPiece == model and selectedByUserId == player.UserId then
 					selectedPiece = nil
 					selectedByUserId = nil
 					controlEvent:FireAllClients("ClearHighlights")
 					setStatus(currentTurn .. " to move")
 				else
+					if startTeamQuiz(currentTurn, currentRow, currentCol, pieceType) then
+						return
+					end
 					selectedPiece = model
 					selectedByUserId = player.UserId
 					local legal = ChessEngine.legalMoves(engineState, currentRow, currentCol)
