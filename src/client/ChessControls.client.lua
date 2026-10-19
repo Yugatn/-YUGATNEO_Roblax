@@ -446,7 +446,7 @@ controlEvent.OnClientEvent:Connect(function(action, payload, fromRow, fromCol)
 			local verticalFov = math.rad(55)
 			local requiredDistance = (boardSpan / 2) / math.tan(verticalFov / 2)
 			local height = math.max(34, requiredDistance * 0.78)
-			local depth = math.max(18, height * 0.48) * (side == "White" and 1 or -1)
+			local depth = math.max(18, height * 0.48) * (side == "White" and -1 or 1)
 			activeChessCameraCFrame = CFrame.lookAt(target + Vector3.new(0, height, depth), target)
 			camera.FieldOfView = 55
 			RunService:UnbindFromRenderStep(CAMERA_BIND_NAME)
