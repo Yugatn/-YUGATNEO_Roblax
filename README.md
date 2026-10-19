@@ -22,6 +22,11 @@ A Roblox Studio chess game prototype for the YUGATNEO world. The active developm
 - Draw handling for threefold repetition, the fifty-move rule, and insufficient material is not implemented yet.
 - Automated tests and live Roblox Studio verification are still required before treating the rules engine as tournament-ready.
 
+## Top-down chess interaction
+- A green walk-on pad is placed beside the chessboard. Stepping onto it switches the local camera to a top-down view; use the on-screen **EXIT** control to return to the normal camera.
+- Select a piece and click a highlighted green square. The server validates legal moves through `ChessEngine`, including check restrictions and special chess moves supported by the engine.
+- This is a shared-board prototype. The new camera pad and interaction should be verified in Roblox Studio with both mouse and keyboard controls before publishing.
+
 ## Run in Roblox Studio
 
 1. Open this repository folder on your Mac.
