@@ -3,6 +3,7 @@
 -- castling, en passant, or pawn promotion yet.
 
 local Players = game:GetService("Players")
+local ChessEngine = require(script.Parent:WaitForChild("ChessEngine"))
 
 local TILE = 4
 local BOARD_Y = 1
@@ -62,6 +63,7 @@ end
 local tiles = {}
 local occupancy = {}
 local currentTurn = "White"
+local engineState = ChessEngine.newGame()
 local selectedPiece = nil
 local selectedTile = nil
 local tryMove
@@ -321,40 +323,10 @@ local function pathIsClear(fromRow, fromCol, toRow, toCol)
 end
 
 local function isValidMove(piece, toRow, toCol)
-	if not piece or not piece.Parent or not inside(toRow, toCol) then
-		return false
-	end
-	local fromRow = piece:GetAttribute("Row")
-	local fromCol = piece:GetAttribute("Col")
-	local pieceType = piece:GetAttribute("PieceType")
-	local side = piece:GetAttribute("Side")
-	local dr = toRow - fromRow
-	local dc = toCol - fromCol
-	if dr == 0 and dc == 0 then return false end
-
-	local target = occupancy[key(toRow, toCol)]
-	if target and target:GetAttribute("Side") == side then return false end
-
-	if pieceType == "Pawn" then
-		local direction = side == "White" and 1 or -1
-		local startRow = side == "White" and 2 or 7
-		if dc == 0 and dr == direction and not target then return true end
-		if dc == 0 and dr == 2 * direction and fromRow == startRow and not target
-			and not occupancy[key(fromRow + direction, fromCol)] then return true end
-		if math.abs(dc) == 1 and dr == direction and target then return true end
-		return false
-	elseif pieceType == "Knight" then
-		return (math.abs(dr) == 2 and math.abs(dc) == 1) or (math.abs(dr) == 1 and math.abs(dc) == 2)
-	elseif pieceType == "King" then
-		return math.max(math.abs(dr), math.abs(dc)) == 1
-	elseif pieceType == "Bishop" then
-		return math.abs(dr) == math.abs(dc) and pathIsClear(fromRow, fromCol, toRow, toCol)
-	elseif pieceType == "Rook" then
-		return (dr == 0 or dc == 0) and pathIsClear(fromRow, fromCol, toRow, toCol)
-	elseif pieceType == "Queen" then
-		local straight = dr == 0 or dc == 0
-		local diagonal = math.abs(dr) == math.abs(dc)
-		return (straight or diagonal) and pathIsClear(fromRow, fromCol, toRow, toCol)
+	if not piece or not piece.Parent then return false end
+	local row, col = piece:GetAttribute("Row"), piece:GetAttribute("Col")
+	for _, move in ipairs(ChessEngine.legalMoves(engineState, row, col)) do
+		if move.row == toRow and move.col == toCol then return true end
 	end
 	return false
 end
@@ -369,26 +341,56 @@ tryMove = function(toRow, toCol)
 		selectedPiece = nil
 		return
 	end
-	if not isValidMove(piece, toRow, toCol) then
-		setStatus(currentTurn .. " to move | Invalid move")
+
+	local fromRow, fromCol = piece:GetAttribute("Row"), piece:GetAttribute("Col")
+	local side = piece:GetAttribute("Side")
+	local pieceType = piece:GetAttribute("PieceType")
+	-- The first implementation promotes automatically to a queen. The client UI will
+	-- expose the promotion choice in a subsequent UI pass.
+	local success, result, captured, move = ChessEngine.move(engineState, fromRow, fromCol, toRow, toCol, "Queen")
+	if not success then
+		setStatus(currentTurn .. " to move | " .. tostring(result))
 		return
 	end
 
-	local fromRow = piece:GetAttribute("Row")
-	local fromCol = piece:GetAttribute("Col")
-	local target = occupancy[key(toRow, toCol)]
-	if target then
-		occupancy[key(toRow, toCol)] = nil
-		target:Destroy()
+	local captureRow = move.enPassant and (toRow + (side == "White" and -1 or 1)) or toRow
+	local capturedModel = occupancy[key(captureRow, toCol)]
+	if capturedModel and capturedModel ~= piece then
+		occupancy[key(captureRow, toCol)] = nil
+		capturedModel:Destroy()
 	end
+
 	occupancy[key(fromRow, fromCol)] = nil
 	occupancy[key(toRow, toCol)] = piece
 	piece:SetAttribute("Row", toRow)
 	piece:SetAttribute("Col", toCol)
+
+	if move.castle then
+		local home = side == "White" and 1 or 8
+		local rookFromCol = move.castle == "kingSide" and 8 or 1
+		local rookToCol = move.castle == "kingSide" and 6 or 4
+		local rook = occupancy[key(home, rookFromCol)]
+		if rook then
+			occupancy[key(home, rookFromCol)] = nil
+			occupancy[key(home, rookToCol)] = rook
+			rook:SetAttribute("Row", home)
+			rook:SetAttribute("Col", rookToCol)
+			rook:PivotTo(CFrame.new(squarePosition(home, rookToCol, PIECE_Y)) * CFrame.Angles(0, 0, math.rad(90)))
+		end
+	end
+
 	piece:PivotTo(CFrame.new(squarePosition(toRow, toCol, PIECE_Y)) * CFrame.Angles(0, 0, math.rad(90)))
+	local promoted = pieceType == "Pawn" and (toRow == 1 or toRow == 8)
+	if promoted then
+		piece:Destroy()
+		occupancy[key(toRow, toCol)] = nil
+		piece = makePiece("Queen", side, toRow, toCol)
+	end
+
 	selectedPiece = nil
-	currentTurn = currentTurn == "White" and "Black" or "White"
-	setStatus(currentTurn .. " to move")
+	currentTurn = engineState.turn
+	local status = ChessEngine.status(engineState)
+	setStatus(status.text)
 end
 
 local backRank = {"Rook", "Knight", "Bishop", "Queen", "King", "Bishop", "Knight", "Rook"}
@@ -398,6 +400,7 @@ local function resetGame()
 	table.clear(occupancy)
 	selectedPiece = nil
 	currentTurn = "White"
+	engineState = ChessEngine.newGame()
 	for col = 1, 8 do
 		makePiece(backRank[col], "White", 1, col)
 		makePiece("Pawn", "White", 2, col)
