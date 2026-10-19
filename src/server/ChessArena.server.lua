@@ -1,8 +1,8 @@
 -- YUGATNEO Roblox Chess Arena
--- Prototype: legal piece movement and captures, but no check/checkmate,
--- castling, en passant, or pawn promotion yet.
+-- Server-authoritative chess rules powered by ChessEngine.
 
 local Players = game:GetService("Players")
+local ChessEngine = require(script.Parent:WaitForChild("ChessEngine"))
 
 local TILE = 4
 local BOARD_Y = 1
@@ -57,14 +57,63 @@ statusLabel.Parent = surfaceGui
 
 local function setStatus(text)
 	statusLabel.Text = "YUGATNEO CHESS\n" .. text
+	controlEvent:FireAllClients("Status", text)
 end
 
 local tiles = {}
 local occupancy = {}
 local currentTurn = "White"
+local engineState = ChessEngine.newGame()
 local selectedPiece = nil
 local selectedTile = nil
+local pendingPromotion = nil
+local pendingPromotionUserId = nil
+local selectedByUserId = nil
+local gameOver = false
+local botEnabled = false
+local botThinking = false
+local botMove
 local tryMove
+
+-- This prototype has one shared board. Only the two seated players may move:
+-- the first player is White, the second is Black; additional players spectate.
+local playerSides = {}
+local seatPlayers = { White = nil, Black = nil }
+local hostUserId = nil
+
+local function assignPlayer(player)
+	if playerSides[player.UserId] then return end
+	if not seatPlayers.White then
+		seatPlayers.White = player.UserId
+		playerSides[player.UserId] = "White"
+	elseif not seatPlayers.Black then
+		seatPlayers.Black = player.UserId
+		playerSides[player.UserId] = "Black"
+	end
+	if not hostUserId then hostUserId = player.UserId end
+	controlEvent:FireClient(player, "SeatAssigned", playerSides[player.UserId] or "Spectator")
+end
+
+for _, player in ipairs(Players:GetPlayers()) do
+	assignPlayer(player)
+end
+Players.PlayerAdded:Connect(assignPlayer)
+Players.PlayerRemoving:Connect(function(player)
+	local side = playerSides[player.UserId]
+	if side and seatPlayers[side] == player.UserId then
+		seatPlayers[side] = nil
+		gameOver = true
+		pendingPromotion = nil
+		pendingPromotionUserId = nil
+		selectedPiece = nil
+		selectedByUserId = nil
+		setStatus(player.Name .. " left; match stopped. A new game requires two seated players.")
+	end
+	playerSides[player.UserId] = nil
+	if hostUserId == player.UserId then
+		hostUserId = seatPlayers.White or seatPlayers.Black
+	end
+end)
 
 local WHITE = Color3.fromRGB(238, 232, 218)
 local BLACK = Color3.fromRGB(65, 75, 91)
@@ -247,20 +296,27 @@ local function makePiece(pieceType, side, row, col)
 	occupancy[key(row, col)] = model
 
 	local function onPieceClicked(player)
+		if gameOver or pendingPromotion then return end
+		if playerSides[player.UserId] ~= currentTurn then return end
 		local currentRow = model:GetAttribute("Row")
 		local currentCol = model:GetAttribute("Col")
 		if model.Parent and occupancy[key(currentRow, currentCol)] == model then
 			if model:GetAttribute("Side") == currentTurn then
 				if selectedPiece == model then
 					selectedPiece = nil
+					selectedByUserId = nil
+					controlEvent:FireAllClients("ClearHighlights")
 					setStatus(currentTurn .. " to move")
 				else
 					selectedPiece = model
+					selectedByUserId = player.UserId
+					local legal = ChessEngine.legalMoves(engineState, currentRow, currentCol)
+					controlEvent:FireAllClients("LegalMoves", legal, currentRow, currentCol)
 					setStatus(currentTurn .. " to move | Selected: " .. pieceType)
 				end
 			elseif selectedPiece then
 				-- Clicking an opposing piece attempts to capture it on its square.
-				tryMove(currentRow, currentCol)
+				tryMove(currentRow, currentCol, nil, player)
 			end
 		end
 	end
@@ -299,7 +355,7 @@ for row = 1, 8 do
 		click.Parent = tile
 		click.MouseClick:Connect(function(player)
 			if selectedPiece then
-				tryMove(row, col)
+				tryMove(row, col, nil, player)
 			end
 		end)
 	end
@@ -321,45 +377,19 @@ local function pathIsClear(fromRow, fromCol, toRow, toCol)
 end
 
 local function isValidMove(piece, toRow, toCol)
-	if not piece or not piece.Parent or not inside(toRow, toCol) then
-		return false
-	end
-	local fromRow = piece:GetAttribute("Row")
-	local fromCol = piece:GetAttribute("Col")
-	local pieceType = piece:GetAttribute("PieceType")
-	local side = piece:GetAttribute("Side")
-	local dr = toRow - fromRow
-	local dc = toCol - fromCol
-	if dr == 0 and dc == 0 then return false end
-
-	local target = occupancy[key(toRow, toCol)]
-	if target and target:GetAttribute("Side") == side then return false end
-
-	if pieceType == "Pawn" then
-		local direction = side == "White" and 1 or -1
-		local startRow = side == "White" and 2 or 7
-		if dc == 0 and dr == direction and not target then return true end
-		if dc == 0 and dr == 2 * direction and fromRow == startRow and not target
-			and not occupancy[key(fromRow + direction, fromCol)] then return true end
-		if math.abs(dc) == 1 and dr == direction and target then return true end
-		return false
-	elseif pieceType == "Knight" then
-		return (math.abs(dr) == 2 and math.abs(dc) == 1) or (math.abs(dr) == 1 and math.abs(dc) == 2)
-	elseif pieceType == "King" then
-		return math.max(math.abs(dr), math.abs(dc)) == 1
-	elseif pieceType == "Bishop" then
-		return math.abs(dr) == math.abs(dc) and pathIsClear(fromRow, fromCol, toRow, toCol)
-	elseif pieceType == "Rook" then
-		return (dr == 0 or dc == 0) and pathIsClear(fromRow, fromCol, toRow, toCol)
-	elseif pieceType == "Queen" then
-		local straight = dr == 0 or dc == 0
-		local diagonal = math.abs(dr) == math.abs(dc)
-		return (straight or diagonal) and pathIsClear(fromRow, fromCol, toRow, toCol)
+	if not piece or not piece.Parent then return false end
+	local row, col = piece:GetAttribute("Row"), piece:GetAttribute("Col")
+	for _, move in ipairs(ChessEngine.legalMoves(engineState, row, col)) do
+		if move.row == toRow and move.col == toCol then return true end
 	end
 	return false
 end
 
-tryMove = function(toRow, toCol)
+tryMove = function(toRow, toCol, promotionChoice, player)
+	if gameOver then return end
+	if not player or playerSides[player.UserId] ~= currentTurn then return end
+	if selectedByUserId ~= player.UserId then return end
+	if pendingPromotion and not promotionChoice then return end
 	if not selectedPiece or not selectedPiece.Parent then
 		selectedPiece = nil
 		return
@@ -369,35 +399,119 @@ tryMove = function(toRow, toCol)
 		selectedPiece = nil
 		return
 	end
-	if not isValidMove(piece, toRow, toCol) then
-		setStatus(currentTurn .. " to move | Invalid move")
+
+	local fromRow, fromCol = piece:GetAttribute("Row"), piece:GetAttribute("Col")
+	local side = piece:GetAttribute("Side")
+	local pieceType = piece:GetAttribute("PieceType")
+	if pieceType == "Pawn" and (toRow == 1 or toRow == 8) and not promotionChoice then
+		pendingPromotion = { row = toRow, col = toCol }
+		pendingPromotionUserId = player.UserId
+		controlEvent:FireClient(player, "PromotionRequired")
+		setStatus("Choose a piece for pawn promotion")
+		return
+	end
+	local success, result, captured, move = ChessEngine.move(engineState, fromRow, fromCol, toRow, toCol, promotionChoice or "Queen")
+	if not success then
+		setStatus(currentTurn .. " to move | " .. tostring(result))
 		return
 	end
 
-	local fromRow = piece:GetAttribute("Row")
-	local fromCol = piece:GetAttribute("Col")
-	local target = occupancy[key(toRow, toCol)]
-	if target then
-		occupancy[key(toRow, toCol)] = nil
-		target:Destroy()
+	local captureRow = move.enPassant and (toRow + (side == "White" and -1 or 1)) or toRow
+	local capturedModel = occupancy[key(captureRow, toCol)]
+	if capturedModel and capturedModel ~= piece then
+		occupancy[key(captureRow, toCol)] = nil
+		capturedModel:Destroy()
 	end
+
 	occupancy[key(fromRow, fromCol)] = nil
 	occupancy[key(toRow, toCol)] = piece
 	piece:SetAttribute("Row", toRow)
 	piece:SetAttribute("Col", toCol)
+
+	if move.castle then
+		local home = side == "White" and 1 or 8
+		local rookFromCol = move.castle == "kingSide" and 8 or 1
+		local rookToCol = move.castle == "kingSide" and 6 or 4
+		local rook = occupancy[key(home, rookFromCol)]
+		if rook then
+			occupancy[key(home, rookFromCol)] = nil
+			occupancy[key(home, rookToCol)] = rook
+			rook:SetAttribute("Row", home)
+			rook:SetAttribute("Col", rookToCol)
+			rook:PivotTo(CFrame.new(squarePosition(home, rookToCol, PIECE_Y)) * CFrame.Angles(0, 0, math.rad(90)))
+		end
+	end
+
 	piece:PivotTo(CFrame.new(squarePosition(toRow, toCol, PIECE_Y)) * CFrame.Angles(0, 0, math.rad(90)))
+	local promoted = pieceType == "Pawn" and (toRow == 1 or toRow == 8)
+	if promoted then
+		local promotedType = (promotionChoice == "Queen" or promotionChoice == "Rook" or promotionChoice == "Bishop" or promotionChoice == "Knight") and promotionChoice or "Queen"
+		piece:Destroy()
+		occupancy[key(toRow, toCol)] = nil
+		piece = makePiece(promotedType, side, toRow, toCol)
+	end
+
 	selectedPiece = nil
-	currentTurn = currentTurn == "White" and "Black" or "White"
-	setStatus(currentTurn .. " to move")
+	selectedByUserId = nil
+	pendingPromotion = nil
+	controlEvent:FireAllClients("ClearHighlights")
+	currentTurn = engineState.turn
+	local status = ChessEngine.status(engineState)
+	gameOver = status.gameOver
+	setStatus(status.text)
+	if botEnabled and currentTurn == "Black" and not gameOver then
+		task.delay(0.6, function()
+			if botMove and botEnabled and currentTurn == "Black" and not gameOver then
+				botMove()
+			end
+		end)
+	end
+end
+
+botMove = function()
+	if botThinking or not botEnabled or gameOver or currentTurn ~= "Black" then return end
+	botThinking = true
+	local candidates = ChessEngine.allLegalMoves(engineState, "Black")
+	if #candidates == 0 then botThinking = false; return end
+	local bestScore = -math.huge
+	local bestMoves = {}
+	local values = { Pawn = 1, Knight = 3, Bishop = 3.2, Rook = 5, Queen = 9, King = 100 }
+	for _, candidate in ipairs(candidates) do
+		local moving = engineState.board[candidate.fromRow][candidate.fromCol]
+		local target = engineState.board[candidate.row][candidate.col]
+		local score = math.random() * 0.3
+		if target then score += 1.5 + (values[target.type] or 0) * 0.9 - (values[moving.type] or 1) * 0.04 end
+		if moving.type == "Pawn" and (candidate.row == 1 or candidate.row == 8) then score += 8 end
+		local simulated = ChessEngine.copy(engineState)
+		ChessEngine.move(simulated, candidate.fromRow, candidate.fromCol, candidate.row, candidate.col, "Queen")
+		if ChessEngine.inCheck(simulated, "White") then score += 1.25 end
+		if ChessEngine.inCheck(simulated, "Black") then score -= 1.5 end
+		if score > bestScore then bestScore = score; bestMoves = { candidate }
+		elseif score >= bestScore - 0.25 then table.insert(bestMoves, candidate) end
+	end
+	local chosen = bestMoves[math.random(1, #bestMoves)]
+	local model = occupancy[key(chosen.fromRow, chosen.fromCol)]
+	if model then
+		selectedPiece = model
+		selectedByUserId = -1
+		tryMove(chosen.row, chosen.col, "Queen", { UserId = -1 })
+	end
+	botThinking = false
 end
 
 local backRank = {"Rook", "Knight", "Bishop", "Queen", "King", "Bishop", "Knight", "Rook"}
 
 local function resetGame()
+	botThinking = false
 	piecesFolder:ClearAllChildren()
 	table.clear(occupancy)
 	selectedPiece = nil
+	selectedByUserId = nil
+	pendingPromotion = nil
+	pendingPromotionUserId = nil
+	gameOver = false
 	currentTurn = "White"
+	engineState = ChessEngine.newGame()
 	for col = 1, 8 do
 		makePiece(backRank[col], "White", 1, col)
 		makePiece("Pawn", "White", 2, col)
@@ -407,11 +521,39 @@ local function resetGame()
 	setStatus("White to move | New game")
 end
 
-controlEvent.OnServerEvent:Connect(function(player, action)
-	if action == "Reset" then
+controlEvent.OnServerEvent:Connect(function(player, action, choice)
+	if action == "PlayBot" then
+		if seatPlayers.White ~= player.UserId or (seatPlayers.Black ~= nil and seatPlayers.Black ~= -1) then
+			controlEvent:FireClient(player, "Status", "Practice mode is available when you have the White seat and no human opponent is seated.")
+			return
+		end
+		botEnabled = true
+		playerSides[-1] = "Black"
+		seatPlayers.Black = -1
+		hostUserId = player.UserId
 		resetGame()
+		controlEvent:FireClient(player, "Status", "Practice vs Bot — you are White. Select a piece, then a green square.")
+	elseif action == "Promote" then
+		if pendingPromotion and selectedPiece and pendingPromotionUserId == player.UserId and selectedByUserId == player.UserId then
+			local pending = pendingPromotion
+			pendingPromotion = nil
+			pendingPromotionUserId = nil
+			tryMove(pending.row, pending.col, choice, player)
+		end
+	elseif action == "Reset" then
+		if player.UserId == hostUserId and seatPlayers.White and seatPlayers.Black then
+			resetGame()
+		else
+			controlEvent:FireClient(player, "Status", "Only the table host can reset, and two players must be seated.")
+		end
 	elseif action == "Deselect" then
+		if selectedByUserId ~= player.UserId then return end
 		selectedPiece = nil
+		selectedByUserId = nil
+		pendingPromotion = nil
+		pendingPromotionUserId = nil
+		controlEvent:FireAllClients("PromotionHide")
+		controlEvent:FireAllClients("ClearHighlights")
 		setStatus(currentTurn .. " to move")
 	end
 end)
@@ -428,5 +570,5 @@ floor.Material = Enum.Material.Slate
 floor.Color = Color3.fromRGB(28, 32, 42)
 floor.Parent = arena
 
-setStatus("White to move")
+setStatus("White to move | Press PLAY VS BOT to practise alone")
 print("YUGATNEO Chess Arena loaded: board, labelled pieces, and game controls created.")

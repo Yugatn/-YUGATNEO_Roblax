@@ -1,96 +1,309 @@
--- YUGATNEO Chess Arena: on-screen controls
--- Place this LocalScript in StarterPlayer > StarterPlayerScripts.
-
+-- YUGATNEO Chess: polished controls, move hints, and live status.
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-
 local player = Players.LocalPlayer
 local controlEvent = ReplicatedStorage:WaitForChild("ChessControlEvent")
+
+local COLORS = {
+	panel = Color3.fromRGB(17, 22, 32),
+	panel2 = Color3.fromRGB(27, 34, 47),
+	gold = Color3.fromRGB(235, 190, 92),
+	text = Color3.fromRGB(242, 244, 248),
+	muted = Color3.fromRGB(166, 176, 193),
+	blue = Color3.fromRGB(62, 105, 156),
+	green = Color3.fromRGB(58, 143, 106),
+	red = Color3.fromRGB(151, 75, 64),
+}
 
 local gui = Instance.new("ScreenGui")
 gui.Name = "YUGATNEOChessControls"
 gui.ResetOnSpawn = false
 gui.IgnoreGuiInset = false
+gui.DisplayOrder = 20
 gui.Parent = player:WaitForChild("PlayerGui")
+
+local function round(instance, radius)
+	local corner = Instance.new("UICorner")
+	corner.CornerRadius = UDim.new(0, radius)
+	corner.Parent = instance
+	return corner
+end
+
+local function stroke(instance, color, transparency)
+	local edge = Instance.new("UIStroke")
+	edge.Color = color
+	edge.Transparency = transparency or 0
+	edge.Thickness = 1
+	edge.Parent = instance
+	return edge
+end
 
 local panel = Instance.new("Frame")
 panel.Name = "ControlPanel"
-panel.AnchorPoint = Vector2.new(0, 0)
-panel.Position = UDim2.new(0, 18, 0, 18)
-panel.Size = UDim2.new(0, 250, 0, 178)
-panel.BackgroundColor3 = Color3.fromRGB(22, 27, 38)
-panel.BackgroundTransparency = 0.08
+panel.Position = UDim2.new(0, 20, 0, 20)
+panel.Size = UDim2.new(0, 300, 0, 266)
+panel.BackgroundColor3 = COLORS.panel
+panel.BackgroundTransparency = 0.04
 panel.BorderSizePixel = 0
 panel.Parent = gui
+round(panel, 16)
+stroke(panel, Color3.fromRGB(90, 104, 128), 0.35)
 
-local panelCorner = Instance.new("UICorner")
-panelCorner.CornerRadius = UDim.new(0, 12)
-panelCorner.Parent = panel
+local header = Instance.new("Frame")
+header.Name = "Header"
+header.Size = UDim2.new(1, 0, 0, 58)
+header.BackgroundColor3 = COLORS.panel2
+header.BorderSizePixel = 0
+header.Parent = panel
+round(header, 16)
 
-local title = Instance.new("TextLabel")
-title.Name = "Title"
-title.Position = UDim2.new(0, 12, 0, 7)
-title.Size = UDim2.new(1, -24, 0, 30)
-title.BackgroundTransparency = 1
-title.Text = "YUGATNEO CHESS"
-title.TextColor3 = Color3.fromRGB(255, 218, 125)
-title.TextXAlignment = Enum.TextXAlignment.Left
-title.Font = Enum.Font.GothamBlack
-title.TextSize = 18
-title.Parent = panel
+local headerMask = Instance.new("Frame")
+headerMask.Position = UDim2.new(0, 0, 1, -15)
+headerMask.Size = UDim2.new(1, 0, 0, 15)
+headerMask.BackgroundColor3 = COLORS.panel2
+headerMask.BorderSizePixel = 0
+headerMask.Parent = header
 
-local function makeButton(name, text, y, color)
+local logo = Instance.new("TextLabel")
+logo.Name = "Brand"
+logo.Position = UDim2.new(0, 16, 0, 7)
+logo.Size = UDim2.new(1, -32, 0, 25)
+logo.BackgroundTransparency = 1
+logo.Text = "♔  YUGATNEO CHESS"
+logo.TextColor3 = COLORS.gold
+logo.Font = Enum.Font.GothamBlack
+logo.TextSize = 18
+logo.TextXAlignment = Enum.TextXAlignment.Left
+logo.Parent = header
+
+local subtitle = Instance.new("TextLabel")
+subtitle.Position = UDim2.new(0, 17, 0, 32)
+subtitle.Size = UDim2.new(1, -34, 0, 16)
+subtitle.BackgroundTransparency = 1
+subtitle.Text = "CLASSIC CHESS • TWO SIDES • ONE BOARD"
+subtitle.TextColor3 = COLORS.muted
+subtitle.Font = Enum.Font.GothamMedium
+subtitle.TextSize = 9
+subtitle.TextXAlignment = Enum.TextXAlignment.Left
+subtitle.Parent = header
+
+local statusCard = Instance.new("Frame")
+statusCard.Name = "StatusCard"
+statusCard.Position = UDim2.new(0, 12, 0, 70)
+statusCard.Size = UDim2.new(1, -24, 0, 48)
+statusCard.BackgroundColor3 = Color3.fromRGB(34, 43, 58)
+statusCard.BorderSizePixel = 0
+statusCard.Parent = panel
+round(statusCard, 10)
+
+local statusDot = Instance.new("Frame")
+statusDot.Position = UDim2.new(0, 12, 0.5, -5)
+statusDot.Size = UDim2.new(0, 10, 0, 10)
+statusDot.BackgroundColor3 = COLORS.gold
+statusDot.BorderSizePixel = 0
+statusDot.Parent = statusCard
+round(statusDot, 5)
+
+local statusLabel = Instance.new("TextLabel")
+statusLabel.Name = "Status"
+statusLabel.Position = UDim2.new(0, 30, 0, 0)
+statusLabel.Size = UDim2.new(1, -40, 1, 0)
+statusLabel.BackgroundTransparency = 1
+statusLabel.Text = "White to move"
+statusLabel.TextColor3 = COLORS.text
+statusLabel.Font = Enum.Font.GothamBold
+statusLabel.TextSize = 14
+statusLabel.TextWrapped = true
+statusLabel.TextXAlignment = Enum.TextXAlignment.Left
+statusLabel.Parent = statusCard
+
+local function makeButton(name, label, x, y, width, color)
 	local button = Instance.new("TextButton")
 	button.Name = name
-	button.Position = UDim2.new(0, 12, 0, y)
-	button.Size = UDim2.new(1, -24, 0, 34)
+	button.Position = UDim2.new(0, x, 0, y)
+	button.Size = UDim2.new(0, width, 0, 36)
 	button.BackgroundColor3 = color
 	button.BorderSizePixel = 0
-	button.Text = text
-	button.TextColor3 = Color3.fromRGB(255, 255, 255)
+	button.Text = label
+	button.TextColor3 = COLORS.text
 	button.Font = Enum.Font.GothamBold
-	button.TextSize = 14
+	button.TextSize = 12
 	button.AutoButtonColor = true
 	button.Parent = panel
-	local corner = Instance.new("UICorner")
-	corner.CornerRadius = UDim.new(0, 7)
-	corner.Parent = button
+	round(button, 9)
 	return button
 end
 
-local helpButton = makeButton("HelpButton", "How to play", 42, Color3.fromRGB(52, 89, 130))
-local deselectButton = makeButton("DeselectButton", "Cancel selection", 82, Color3.fromRGB(80, 86, 99))
-local resetButton = makeButton("ResetButton", "Start a new game", 122, Color3.fromRGB(153, 78, 53))
+local helpButton = makeButton("HelpButton", "♟  RULES", 12, 130, 86, COLORS.blue)
+local deselectButton = makeButton("DeselectButton", "CANCEL", 106, 130, 82, Color3.fromRGB(69, 79, 96))
+local resetButton = makeButton("ResetButton", "NEW GAME", 196, 130, 92, COLORS.red)
+local botButton = makeButton("PlayBotButton", "PLAY VS BOT", 12, 220, 276, COLORS.green)
 
-local helpPanel = Instance.new("TextLabel")
-helpPanel.Name = "HelpText"
-helpPanel.Position = UDim2.new(0, 18, 0, 205)
-helpPanel.Size = UDim2.new(0, 310, 0, 148)
-helpPanel.BackgroundColor3 = Color3.fromRGB(22, 27, 38)
-helpPanel.BackgroundTransparency = 0.04
+local tip = Instance.new("TextLabel")
+tip.Name = "Tip"
+tip.Position = UDim2.new(0, 14, 0, 174)
+tip.Size = UDim2.new(1, -28, 0, 38)
+tip.BackgroundTransparency = 1
+tip.Text = "1. Start PLAY VS BOT.  2. Select a piece.\n3. Click a green square to move."
+tip.TextColor3 = COLORS.muted
+tip.Font = Enum.Font.Gotham
+tip.TextSize = 11
+tip.TextWrapped = true
+tip.TextXAlignment = Enum.TextXAlignment.Left
+tip.TextYAlignment = Enum.TextYAlignment.Top
+tip.Parent = panel
+
+local helpPanel = Instance.new("Frame")
+helpPanel.Name = "RulesPanel"
+helpPanel.Position = UDim2.new(0, 20, 0, 280)
+helpPanel.Size = UDim2.new(0, 320, 0, 290)
+helpPanel.BackgroundColor3 = COLORS.panel
 helpPanel.BorderSizePixel = 0
-helpPanel.TextColor3 = Color3.fromRGB(245, 245, 245)
-helpPanel.TextWrapped = true
-helpPanel.TextXAlignment = Enum.TextXAlignment.Left
-helpPanel.TextYAlignment = Enum.TextYAlignment.Top
-helpPanel.Font = Enum.Font.Gotham
-helpPanel.TextSize = 14
-helpPanel.Text = "HOW TO PLAY\n1. Click one of your pieces.\n2. Click the destination square.\n3. White moves first, then Black.\n\nP pawn | R rook | N knight | B bishop | Q queen | K king\n\nPrototype note: check/checkmate and special moves are not implemented yet."
 helpPanel.Visible = false
 helpPanel.Parent = gui
-local helpCorner = Instance.new("UICorner")
-helpCorner.CornerRadius = UDim.new(0, 10)
-helpCorner.Parent = helpPanel
+round(helpPanel, 14)
+stroke(helpPanel, COLORS.gold, 0.3)
+
+local helpTitle = Instance.new("TextLabel")
+helpTitle.Position = UDim2.new(0, 14, 0, 10)
+helpTitle.Size = UDim2.new(1, -28, 0, 28)
+helpTitle.BackgroundTransparency = 1
+helpTitle.Text = "HOW TO PLAY"
+helpTitle.TextColor3 = COLORS.gold
+helpTitle.Font = Enum.Font.GothamBlack
+helpTitle.TextSize = 17
+helpTitle.TextXAlignment = Enum.TextXAlignment.Left
+helpTitle.Parent = helpPanel
+
+local helpText = Instance.new("TextLabel")
+helpText.Position = UDim2.new(0, 14, 0, 44)
+helpText.Size = UDim2.new(1, -28, 1, -92)
+helpText.BackgroundTransparency = 1
+helpText.Text = "START A GAME\nPress PLAY VS BOT. You play White; the bot plays Black.\n\nHOW TO MOVE\n1. Click one of your pieces.\n2. Green squares are legal destinations.\n3. Click a green square to move.\n4. The bot replies after your move.\n\nPIECES\nPawn: forward; captures diagonally.\nRook: straight lines. Bishop: diagonals.\nQueen: straight and diagonal.\nKnight: an L-shape. King: one square.\n\nGOAL\nCheckmate the opposing king. Protect your own king. The status panel tells you whose turn it is and announces check, checkmate or stalemate. Special moves include castling, en passant and pawn promotion. Press CANCEL to clear your selection."
+helpText.TextColor3 = COLORS.text
+helpText.Font = Enum.Font.Gotham
+helpText.TextSize = 12
+helpText.TextWrapped = true
+helpText.TextXAlignment = Enum.TextXAlignment.Left
+helpText.TextYAlignment = Enum.TextYAlignment.Top
+helpText.Parent = helpPanel
+
+local closeHelp = makeButton("CloseHelp", "CLOSE", 14, 184, 272, COLORS.blue)
+closeHelp.Parent = helpPanel
+closeHelp.Position = UDim2.new(0, 14, 1, -44)
+closeHelp.Size = UDim2.new(1, -28, 0, 32)
 
 helpButton.Activated:Connect(function()
 	helpPanel.Visible = not helpPanel.Visible
-	helpButton.Text = helpPanel.Visible and "Hide instructions" or "How to play"
 end)
-
+closeHelp.Activated:Connect(function()
+	helpPanel.Visible = false
+end)
 deselectButton.Activated:Connect(function()
 	controlEvent:FireServer("Deselect")
 end)
-
 resetButton.Activated:Connect(function()
 	controlEvent:FireServer("Reset")
+end)
+botButton.Activated:Connect(function()
+	controlEvent:FireServer("PlayBot")
+end)
+
+local promotionPanel = Instance.new("Frame")
+promotionPanel.Name = "PromotionChoice"
+promotionPanel.AnchorPoint = Vector2.new(0.5, 0.5)
+promotionPanel.Position = UDim2.fromScale(0.5, 0.5)
+promotionPanel.Size = UDim2.new(0, 330, 0, 116)
+promotionPanel.BackgroundColor3 = COLORS.panel
+promotionPanel.BorderSizePixel = 0
+promotionPanel.Visible = false
+promotionPanel.Parent = gui
+round(promotionPanel, 14)
+stroke(promotionPanel, COLORS.gold, 0.15)
+
+local promotionTitle = Instance.new("TextLabel")
+promotionTitle.Position = UDim2.new(0, 12, 0, 8)
+promotionTitle.Size = UDim2.new(1, -24, 0, 25)
+promotionTitle.BackgroundTransparency = 1
+promotionTitle.Text = "PROMOTE YOUR PAWN"
+promotionTitle.TextColor3 = COLORS.gold
+promotionTitle.Font = Enum.Font.GothamBlack
+promotionTitle.TextSize = 15
+promotionTitle.Parent = promotionPanel
+
+for index, choice in ipairs({ { "Queen", "♛  QUEEN" }, { "Rook", "♜  ROOK" }, { "Bishop", "♝  BISHOP" }, { "Knight", "♞  KNIGHT" } }) do
+	local button = Instance.new("TextButton")
+	button.Name = choice[1] .. "Promotion"
+	button.Position = UDim2.new(0, 12 + (index - 1) * 79, 0, 48)
+	button.Size = UDim2.new(0, 72, 0, 48)
+	button.BackgroundColor3 = COLORS.panel2
+	button.BorderSizePixel = 0
+	button.Text = choice[2]
+	button.TextColor3 = COLORS.text
+	button.Font = Enum.Font.GothamBold
+	button.TextSize = 10
+	button.TextWrapped = true
+	button.Parent = promotionPanel
+	round(button, 8)
+	button.Activated:Connect(function()
+		promotionPanel.Visible = false
+		controlEvent:FireServer("Promote", choice[1])
+	end)
+end
+
+local highlighted = {}
+local function restoreHighlights()
+	for tile, original in pairs(highlighted) do
+		if tile and tile.Parent then tile.Color = original end
+	end
+	table.clear(highlighted)
+end
+
+local function getTileColor(row, col)
+	return ((row + col) % 2 == 0) and Color3.fromRGB(238, 232, 218) or Color3.fromRGB(65, 75, 91)
+end
+
+controlEvent.OnClientEvent:Connect(function(action, payload, fromRow, fromCol)
+	if action == "SeatAssigned" then
+		local assigned = tostring(payload)
+		if assigned == "White" or assigned == "Black" then
+			statusLabel.Text = "You are " .. assigned .. " — waiting for both players"
+		else
+			statusLabel.Text = "Spectator — both seats are occupied"
+		end
+	elseif action == "PromotionRequired" then
+		promotionPanel.Visible = true
+	elseif action == "PromotionHide" then
+		promotionPanel.Visible = false
+	elseif action == "Status" then
+		statusLabel.Text = tostring(payload)
+		if string.find(string.lower(tostring(payload)), "checkmate") or string.find(string.lower(tostring(payload)), "stalemate") then
+			statusDot.BackgroundColor3 = COLORS.red
+		elseif string.find(string.lower(tostring(payload)), "check") then
+			statusDot.BackgroundColor3 = COLORS.gold
+		else
+			statusDot.BackgroundColor3 = COLORS.green
+		end
+	elseif action == "ClearHighlights" then
+		restoreHighlights()
+	elseif action == "LegalMoves" then
+		restoreHighlights()
+		local arena = workspace:FindFirstChild("YUGATNEO_ChessArena")
+		local board = arena and arena:FindFirstChild("Board")
+		if not board then return end
+		if fromRow and fromCol then
+			local origin = board:FindFirstChild("Square_" .. fromRow .. "_" .. fromCol)
+			if origin then
+				highlighted[origin] = getTileColor(fromRow, fromCol)
+				origin.Color = COLORS.gold
+			end
+		end
+		for _, move in ipairs(payload or {}) do
+			local tile = board:FindFirstChild("Square_" .. move.row .. "_" .. move.col)
+			if tile then
+				highlighted[tile] = getTileColor(move.row, move.col)
+				tile.Color = COLORS.green
+			end
+		end
+	end
 end)
