@@ -465,7 +465,7 @@ controlEvent.OnClientEvent:Connect(function(action, payload, fromRow, fromCol)
 		if assigned == "White" or assigned == "Black" then
 			statusLabel.Text = "You are " .. assigned .. " — waiting for both players"
 		else
-			statusLabel.Text = "Spectator — both seats are occupied"
+			statusLabel.Text = "Choose White or Black field to join, or press PLAY VS BOT."
 		end
 	elseif action == "PromotionRequired" then
 		promotionPanel.Visible = true
