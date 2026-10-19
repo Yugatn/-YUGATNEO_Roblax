@@ -1,4 +1,4 @@
--- YUGATNEO MatchTable: one independent chess table (engine, players, FSM, 3D).
+-- YUGATNEO MatchTable: independent chess table (engine, players, FSM, 3D).
 local Players = game:GetService("Players")
 local ChessEngine = require(script.Parent:WaitForChild("ChessEngine"))
 
@@ -6,11 +6,11 @@ local MatchTable = {}
 MatchTable.__index = MatchTable
 
 local TILE, BOARD_Y = 4, 1
-local PIECE_Y = BOARD_Y + 0.18
+local PIECE_Y = BOARD_Y + 0.2
 local WHITE = Color3.fromRGB(238, 232, 218)
 local BLACK = Color3.fromRGB(65, 75, 91)
-local WHITE_PIECE = Color3.fromRGB(245, 245, 240)
-local BLACK_PIECE = Color3.fromRGB(35, 40, 50)
+local WHITE_PIECE = Color3.fromRGB(248, 246, 240)
+local BLACK_PIECE = Color3.fromRGB(32, 36, 44)
 local GOLD = Color3.fromRGB(222, 175, 65)
 
 local VALID = {
@@ -35,6 +35,8 @@ function MatchTable.new(config)
 	self.tableId = config.tableId
 	self.origin = config.origin or Vector3.new(0, BOARD_Y, 0)
 	self.event = config.event
+	self.onJoin = config.onJoin
+	self.onLeave = config.onLeave
 	self.state = "Idle"
 	self.mode = "Classic"
 	self.stakeAmount = 0
@@ -86,6 +88,14 @@ end
 function MatchTable:_notifyOne(uid, action, payload, extra)
 	local p = Players:GetPlayerByUserId(uid)
 	if p then self.event:FireClient(p, action, self.tableId, payload, extra) end
+end
+
+function MatchTable:_callJoin(player)
+	if self.onJoin then self.onJoin(player, self.tableId) end
+end
+
+function MatchTable:_callLeave(player)
+	if self.onLeave and player then self.onLeave(player) end
 end
 
 function MatchTable:getPublicState()
@@ -228,16 +238,17 @@ function MatchTable:_buildWorld()
 	end
 end
 
-local function addPart(model, name, size, offset, color)
+local function addPart(model, name, size, offset, color, material)
 	local p = Instance.new("Part")
 	p.Name = name
 	p.Anchored = true
 	p.CanCollide = false
 	p.Size = size
 	p.Color = color
-	p.Material = Enum.Material.SmoothPlastic
+	p.Material = material or Enum.Material.SmoothPlastic
 	p.CFrame = model:GetPivot() * CFrame.new(offset)
 	p.Parent = model
+	return p
 end
 
 function MatchTable:_makePiece(pieceType, side, row, col)
@@ -250,30 +261,33 @@ function MatchTable:_makePiece(pieceType, side, row, col)
 	model:SetAttribute("TableId", self.tableId)
 
 	local color = side == "White" and WHITE_PIECE or BLACK_PIECE
-	local accent = side == "White" and Color3.fromRGB(185, 190, 195) or GOLD
+	local accent = side == "White" and Color3.fromRGB(200, 205, 210) or GOLD
+	local mat = Enum.Material.Marble
 
 	local base = Instance.new("Part")
 	base.Name = "ClickableBase"
 	base.Shape = Enum.PartType.Cylinder
-	base.Size = Vector3.new(0.42, 1.35, 1.35)
+	base.Size = Vector3.new(0.35, 1.55, 1.55)
 	base.Anchored = true
 	base.CanCollide = false
-	base.Material = Enum.Material.Metal
+	base.Material = mat
 	base.Color = color
 	base.CFrame = CFrame.new(sq(self.origin, row, col, PIECE_Y)) * CFrame.Angles(0, 0, math.rad(90))
 	base.Parent = model
 	model.PrimaryPart = base
 
-	local function cylinder(name, diameter, height, y, partColor)
+	local function cyl(name, diameter, height, y, partColor)
 		local p = Instance.new("Part")
 		p.Name = name
 		p.Shape = Enum.PartType.Cylinder
 		p.Size = Vector3.new(height, diameter, diameter)
 		p.Anchored = true
 		p.CanCollide = false
-		p.Color = partColor
+		p.Material = mat
+		p.Color = partColor or color
 		p.CFrame = CFrame.new(sq(self.origin, row, col, PIECE_Y + y)) * CFrame.Angles(0, 0, math.rad(90))
 		p.Parent = model
+		return p
 	end
 	local function ball(name, diameter, y, partColor)
 		local p = Instance.new("Part")
@@ -282,48 +296,89 @@ function MatchTable:_makePiece(pieceType, side, row, col)
 		p.Size = Vector3.new(diameter, diameter, diameter)
 		p.Anchored = true
 		p.CanCollide = false
-		p.Color = partColor
+		p.Material = mat
+		p.Color = partColor or color
 		p.Position = sq(self.origin, row, col, PIECE_Y + y)
 		p.Parent = model
 	end
 
-	cylinder("Collar", 1.02, 0.25, 0.82, accent)
-	cylinder("Body", 0.72, 0.82, 1.25, color)
+	-- Classic silhouette: wide foot → waist → stem → head
+	cyl("Foot", 1.45, 0.28, 0.55, color)
+	cyl("Waist", 1.05, 0.22, 0.95, accent)
+	cyl("Stem", 0.55, 0.9, 1.45, color)
+
 	if pieceType == "Pawn" then
-		cylinder("Neck", 0.48, 0.28, 1.72, color)
-		ball("Head", 0.62, 1.98, color)
+		cyl("Collar", 0.7, 0.2, 1.95, accent)
+		ball("Head", 0.72, 2.25, color)
 	elseif pieceType == "Rook" then
-		cylinder("Tower", 0.95, 0.55, 1.82, color)
+		cyl("Tower", 1.05, 0.7, 2.05, color)
+		for i = 1, 4 do
+			local a = (i - 1) * math.pi / 2
+			local merlon = Instance.new("Part")
+			merlon.Name = "Merlon"
+			merlon.Size = Vector3.new(0.28, 0.35, 0.28)
+			merlon.Anchored = true
+			merlon.CanCollide = false
+			merlon.Material = mat
+			merlon.Color = accent
+			merlon.Position = sq(self.origin, row, col, PIECE_Y + 2.5)
+				+ Vector3.new(math.cos(a) * 0.35, 0, math.sin(a) * 0.35)
+			merlon.Parent = model
+		end
 	elseif pieceType == "Knight" then
+		local neck = Instance.new("Part")
+		neck.Name = "Neck"
+		neck.Size = Vector3.new(0.4, 0.7, 0.45)
+		neck.Anchored = true
+		neck.CanCollide = false
+		neck.Material = mat
+		neck.Color = color
+		neck.CFrame = CFrame.new(sq(self.origin, row, col, PIECE_Y + 1.95)) * CFrame.Angles(math.rad(-20), 0, 0)
+		neck.Parent = model
 		local head = Instance.new("Part")
 		head.Name = "HorseHead"
-		head.Size = Vector3.new(0.48, 0.92, 0.42)
+		head.Size = Vector3.new(0.55, 0.85, 0.5)
 		head.Anchored = true
 		head.CanCollide = false
+		head.Material = mat
 		head.Color = color
-		head.CFrame = CFrame.new(sq(self.origin, row, col, PIECE_Y + 1.9)) * CFrame.Angles(math.rad(-12), 0, math.rad(-10))
+		head.CFrame = CFrame.new(sq(self.origin, row, col, PIECE_Y + 2.35) + Vector3.new(0.15, 0, 0))
+			* CFrame.Angles(math.rad(-25), math.rad(15), 0)
 		head.Parent = model
+		ball("Snout", 0.28, 2.15, accent)
 	elseif pieceType == "Bishop" then
-		cylinder("MitreBase", 0.72, 0.24, 1.78, color)
-		ball("MitreTip", 0.18, 2.42, accent)
+		cyl("Mitre", 0.85, 0.55, 2.05, color)
+		ball("MitreBall", 0.55, 2.35, color)
+		ball("Tip", 0.22, 2.7, accent)
 	elseif pieceType == "Queen" then
-		cylinder("Crown", 1.02, 0.28, 1.88, color)
+		cyl("CrownBase", 1.15, 0.35, 2.05, color)
+		for i = 1, 5 do
+			local a = (i - 1) * (2 * math.pi / 5)
+			ball("Jewel" .. i, 0.28, 2.35, accent)
+			-- offset jewels around crown
+			local jewel = model:FindFirstChild("Jewel" .. i)
+			if jewel then
+				jewel.Position = sq(self.origin, row, col, PIECE_Y + 2.35)
+					+ Vector3.new(math.cos(a) * 0.38, 0, math.sin(a) * 0.38)
+			end
+		end
+		ball("CrownTop", 0.35, 2.55, accent)
 	elseif pieceType == "King" then
-		cylinder("RoyalCrown", 0.9, 0.3, 1.88, color)
-		addPart(model, "CrossVertical", Vector3.new(0.18, 0.72, 0.18), Vector3.new(0, 2.42, 0), accent)
-		addPart(model, "CrossHorizontal", Vector3.new(0.5, 0.16, 0.16), Vector3.new(0, 2.47, 0), accent)
+		cyl("Crown", 1.0, 0.4, 2.05, color)
+		addPart(model, "CrossV", Vector3.new(0.18, 0.85, 0.18), Vector3.new(0, 2.65, 0), accent, mat)
+		addPart(model, "CrossH", Vector3.new(0.55, 0.18, 0.18), Vector3.new(0, 2.75, 0), accent, mat)
 	end
 
 	local badge = Instance.new("BillboardGui")
-	badge.Size = UDim2.fromOffset(36, 36)
-	badge.StudsOffset = Vector3.new(0, 3, 0)
+	badge.Size = UDim2.fromOffset(34, 34)
+	badge.StudsOffset = Vector3.new(0, 3.4, 0)
 	badge.AlwaysOnTop = true
-	badge.MaxDistance = 100
+	badge.MaxDistance = 90
 	badge.Parent = base
 	local bt = Instance.new("TextLabel")
 	bt.Size = UDim2.fromScale(1, 1)
 	bt.BackgroundColor3 = side == "White" and Color3.fromRGB(30, 35, 45) or Color3.fromRGB(245, 240, 225)
-	bt.BackgroundTransparency = 0.1
+	bt.BackgroundTransparency = 0.15
 	bt.TextColor3 = side == "White" and Color3.new(1, 1, 1) or Color3.fromRGB(20, 25, 35)
 	bt.Font = Enum.Font.GothamBlack
 	bt.TextScaled = true
@@ -334,7 +389,7 @@ function MatchTable:_makePiece(pieceType, side, row, col)
 	model.Parent = self.piecesFolder
 	self.occupancy[key(row, col)] = model
 
-	for _, d in ipairs(model:GetChildren()) do
+	for _, d in ipairs(model:GetDescendants()) do
 		if d:IsA("BasePart") then
 			local cd = Instance.new("ClickDetector")
 			cd.MaxActivationDistance = 80
@@ -403,6 +458,7 @@ function MatchTable:requestJoin(player, options)
 	end
 	self:_setPrompt(self.state == "Idle" or self.state == "Waiting")
 	self:_updateStatus()
+	self:_callJoin(player)
 	self:_notifyBoth("Lobby", self:getPublicState())
 	self:_notifyOne(uid, "Joined", { side = side, state = self:getPublicState() })
 	return true, side
@@ -416,6 +472,7 @@ function MatchTable:cancelWaiting(player)
 	if self.blackPlayerUserId == uid then self.blackPlayerUserId = nil self.blackReady = false end
 	self:_clearSel(uid)
 	self:_notifyOne(uid, "LeftTable", self.tableId)
+	self:_callLeave(player)
 	if not self.whitePlayerUserId and not self.blackPlayerUserId then
 		self.mode = "Classic"
 		self.stakeAmount = 0
@@ -494,14 +551,17 @@ end
 
 function MatchTable:handleDisconnect(uid)
 	if not self:_side(uid) then return end
+	local player = Players:GetPlayerByUserId(uid)
 	if self.state == "Waiting" or self.state == "Ready" then
 		self:cancelWaiting({ UserId = uid })
 	elseif self.state == "Playing" then
 		local side = self:_side(uid)
 		self:_finish("disconnect", side == "White" and "Black" or "White")
+		if player then self:_callLeave(player) end
 	elseif self.state == "Finished" then
 		if self.whitePlayerUserId == uid then self.whitePlayerUserId = nil end
 		if self.blackPlayerUserId == uid then self.blackPlayerUserId = nil end
+		if player then self:_callLeave(player) end
 	end
 end
 
@@ -509,6 +569,7 @@ function MatchTable:clearFinished(player)
 	if self.state ~= "Finished" then return false, "Not finished" end
 	local uid = player and player.UserId
 	if uid and not self:_side(uid) then return false, "Not authorized" end
+	local white, black = self.whitePlayerUserId, self.blackPlayerUserId
 	self.whitePlayerUserId = nil
 	self.blackPlayerUserId = nil
 	self.whiteReady = false
@@ -523,6 +584,14 @@ function MatchTable:clearFinished(player)
 	self:_spawnPieces()
 	self:_transition("Idle")
 	self:_setPrompt(true)
+	if white then
+		local p = Players:GetPlayerByUserId(white)
+		if p then self:_callLeave(p) end
+	end
+	if black then
+		local p = Players:GetPlayerByUserId(black)
+		if p then self:_callLeave(p) end
+	end
 	return true
 end
 
@@ -613,7 +682,12 @@ function MatchTable:tryMove(player, toRow, toCol, promotion)
 	self:_notifyBoth("TableState", self:getPublicState())
 	self:_updateStatus()
 	if status.gameOver then
-		self:_finish(status.checkmate and "checkmate" or "stalemate", status.winner)
+		local reason = "stalemate"
+		if status.checkmate then reason = "checkmate"
+		elseif status.fiftyMove then reason = "fifty_move"
+		elseif status.threefold then reason = "threefold"
+		end
+		self:_finish(reason, status.winner)
 	end
 	return true, status
 end
