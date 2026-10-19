@@ -81,17 +81,66 @@ local playerSides = {}
 local seatPlayers = { White = nil, Black = nil }
 local hostUserId = nil
 
+local teamMembers = { White = {}, Black = {} }
+local pendingTeamQuiz = nil
+local teamQuizSerial = 0
+local TEAM_QUIZ_QUESTIONS = {
+	{ question = "How many squares are on a chessboard?", options = { "32", "64", "81", "100" }, answer = 2 },
+	{ question = "Which piece moves in an L-shape?", options = { "Bishop", "Rook", "Knight", "Pawn" }, answer = 3 },
+	{ question = "What is the main goal of chess?", options = { "Capture every piece", "Checkmate the king", "Reach the last rank", "Keep the queen alive" }, answer = 2 },
+	{ question = "How many kings does each player start with?", options = { "One", "Two", "Three", "Four" }, answer = 1 },
+	{ question = "Which piece can jump over other pieces?", options = { "Rook", "Queen", "Knight", "King" }, answer = 3 },
+	{ question = "A pawn normally captures how?", options = { "Straight ahead", "Diagonally", "Like a knight", "Any direction" }, answer = 2 },
+}
+local function sideMembers(side)
+	local result = {}
+	for userId in pairs(teamMembers[side]) do
+		local player = Players:GetPlayerByUserId(userId)
+		if player then table.insert(result, player) end
+	end
+	return result
+end
+local function memberCount(side)
+	return #sideMembers(side)
+end
+local function startTeamQuiz(side, row, col, pieceType)
+	if pendingTeamQuiz or gameOver then return end
+	local members = sideMembers(side)
+	if #members < 2 then return false end
+	teamQuizSerial += 1
+	local q = TEAM_QUIZ_QUESTIONS[math.random(1, #TEAM_QUIZ_QUESTIONS)]
+	pendingTeamQuiz = {
+		id = teamQuizSerial, side = side, row = row, col = col,
+		pieceType = pieceType, answer = q.answer, expiresAt = os.clock() + 20,
+		answered = {},
+	}
+	for _, teammate in ipairs(members) do
+		controlEvent:FireClient(teammate, "TeamQuiz", {
+			id = teamQuizSerial, side = side, question = q.question,
+			options = q.options, seconds = 20,
+		})
+	end
+	setStatus(side .. " team quiz: first correct answer earns the move")
+	task.delay(20, function()
+		if pendingTeamQuiz and pendingTeamQuiz.id == teamQuizSerial then
+			pendingTeamQuiz = nil
+			controlEvent:FireAllClients("TeamQuizHide")
+			setStatus(side .. " team quiz timed out; click a friendly piece to try again")
+		end
+	end)
+	return true
+end
+
 local function assignPlayer(player)
 	if playerSides[player.UserId] then return end
 	if not seatPlayers.White then
 		seatPlayers.White = player.UserId
 		playerSides[player.UserId] = "White"
+		teamMembers.White[player.UserId] = true
 	elseif not seatPlayers.Black then
 		seatPlayers.Black = player.UserId
-	end
-	if playerSides[player.UserId] == "Black" then
-		seatPlayers.Black = player.UserId
 		playerSides[player.UserId] = "Black"
+		teamMembers.Black[player.UserId] = true
 	end
 	if not hostUserId then hostUserId = player.UserId end
 	controlEvent:FireClient(player, "SeatAssigned", playerSides[player.UserId] or "Spectator")
@@ -103,14 +152,22 @@ end
 Players.PlayerAdded:Connect(assignPlayer)
 Players.PlayerRemoving:Connect(function(player)
 	local side = playerSides[player.UserId]
-	if side and seatPlayers[side] == player.UserId then
-		seatPlayers[side] = nil
-		gameOver = true
-		pendingPromotion = nil
-		pendingPromotionUserId = nil
-		selectedPiece = nil
-		selectedByUserId = nil
-		setStatus(player.Name .. " left; match stopped. A new game requires two seated players.")
+	if side then
+		teamMembers[side][player.UserId] = nil
+		if seatPlayers[side] == player.UserId then
+			seatPlayers[side] = next(teamMembers[side])
+		end
+		if seatPlayers[side] == nil then
+			gameOver = true
+			pendingPromotion = nil
+			pendingPromotionUserId = nil
+			selectedPiece = nil
+			selectedByUserId = nil
+			setStatus(player.Name .. " left; one side has no players.")
+		end
+	end
+	if pendingTeamQuiz then
+		pendingTeamQuiz.answered[player.UserId] = true
 	end
 	playerSides[player.UserId] = nil
 	if hostUserId == player.UserId then
@@ -305,6 +362,9 @@ local function makePiece(pieceType, side, row, col)
 		local currentCol = model:GetAttribute("Col")
 		if model.Parent and occupancy[key(currentRow, currentCol)] == model then
 			if model:GetAttribute("Side") == currentTurn then
+				if startTeamQuiz(currentTurn, currentRow, currentCol, pieceType) then
+					return
+				end
 				if selectedPiece == model then
 					selectedPiece = nil
 					selectedByUserId = nil
@@ -508,6 +568,8 @@ end
 local backRank = {"Rook", "Knight", "Bishop", "Queen", "King", "Bishop", "Knight", "Rook"}
 
 local function resetGame()
+	pendingTeamQuiz = nil
+	controlEvent:FireAllClients("TeamQuizHide")
 	botThinking = false
 	piecesFolder:ClearAllChildren()
 	table.clear(occupancy)
@@ -528,7 +590,46 @@ local function resetGame()
 end
 
 controlEvent.OnServerEvent:Connect(function(player, action, choice)
-	if action == "PlayBot" then
+	if action == "JoinTeam" then
+		local side = choice
+		if side ~= "White" and side ~= "Black" then return end
+		if playerSides[player.UserId] then
+			controlEvent:FireClient(player, "Status", "You are already on the " .. playerSides[player.UserId] .. " team.")
+			return
+		end
+		if memberCount(side) >= 3 then
+			controlEvent:FireClient(player, "Status", side .. " team is full (maximum 3 players).")
+			return
+		end
+		playerSides[player.UserId] = side
+		teamMembers[side][player.UserId] = true
+		if not seatPlayers[side] then seatPlayers[side] = player.UserId end
+		controlEvent:FireClient(player, "SeatAssigned", side)
+		for _, teammate in ipairs(sideMembers(side)) do
+			controlEvent:FireClient(teammate, "Status", side .. " team: " .. memberCount(side) .. "/3 players")
+		end
+	elseif action == "TeamAnswer" then
+		local quiz = pendingTeamQuiz
+		if not quiz or choice == nil or playerSides[player.UserId] ~= quiz.side then return end
+		if quiz.answered[player.UserId] then return end
+		quiz.answered[player.UserId] = true
+		if os.clock() > quiz.expiresAt then return end
+		local answerIndex = tonumber(choice)
+		if answerIndex ~= quiz.answer then
+			controlEvent:FireClient(player, "TeamQuizFeedback", false, "Not quite. Another teammate can still answer.")
+			return
+		end
+		pendingTeamQuiz = nil
+		selectedPiece = occupancy[key(quiz.row, quiz.col)]
+		selectedByUserId = player.UserId
+		controlEvent:FireAllClients("TeamQuizHide")
+		if selectedPiece and selectedPiece.Parent then
+			local legal = ChessEngine.legalMoves(engineState, quiz.row, quiz.col)
+			controlEvent:FireAllClients("LegalMoves", legal, quiz.row, quiz.col)
+			setStatus(player.Name .. " won the " .. quiz.side .. " team quiz and controls " .. quiz.pieceType .. ". Choose a highlighted square.")
+			controlEvent:FireClient(player, "TeamQuizFeedback", true, "Correct! You decide this move.")
+		end
+	elseif action == "PlayBot" then
 		if playerSides[player.UserId] == "White" or not seatPlayers.White or seatPlayers.White == player.UserId then
 			botEnabled = true
 			playerSides[-1] = "Black"
