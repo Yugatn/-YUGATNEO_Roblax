@@ -238,17 +238,6 @@ local function makePiece(pieceType, side, row, col)
 	base.CFrame = CFrame.new(squarePosition(row, col, PIECE_Y)) * CFrame.Angles(0, 0, math.rad(90))
 	base.Parent = model
 	model.PrimaryPart = base
-	local pieceClick = Instance.new("ClickDetector")
-	pieceClick.Name = "ChessPieceClick"
-	pieceClick.MaxActivationDistance = 128
-	pieceClick.Parent = base
-	pieceClick.MouseClick:Connect(function(player)
-		local pieceRow = model:GetAttribute("Row")
-		local pieceCol = model:GetAttribute("Col")
-		if handleBoardClick and pieceRow and pieceCol then
-			handleBoardClick(player, { row = pieceRow, col = pieceCol })
-		end
-	end)
 
 	local function cylinder(name, diameter, height, y, partColor)
 		local p = Instance.new("Part")
@@ -367,6 +356,24 @@ local function makePiece(pieceType, side, row, col)
 	local badgeCorner = Instance.new("UICorner")
 	badgeCorner.CornerRadius = UDim.new(0.5, 0)
 	badgeCorner.Parent = badgeText
+
+	-- The visible piece is built from multiple Parts. Put a detector on every
+	-- visible part so clicks on heads/crowns/bodies work, not just the base.
+	for _, descendant in ipairs(model:GetDescendants()) do
+		if descendant:IsA("BasePart") then
+			local pieceClick = Instance.new("ClickDetector")
+			pieceClick.Name = "ChessPieceClick"
+			pieceClick.MaxActivationDistance = 128
+			pieceClick.Parent = descendant
+			pieceClick.MouseClick:Connect(function(player)
+				local pieceRow = model:GetAttribute("Row")
+				local pieceCol = model:GetAttribute("Col")
+				if handleBoardClick and pieceRow and pieceCol then
+					handleBoardClick(player, { row = pieceRow, col = pieceCol })
+				end
+			end)
+		end
+	end
 
 	model.Parent = piecesFolder
 	occupancy[key(row, col)] = model
