@@ -77,8 +77,8 @@ local botThinking = false
 local botMove
 local tryMove
 
--- This prototype has one shared board. Only the two seated players may move:
--- the first player is White, the second is Black; additional players spectate.
+-- Two physical boards display one shared server-authoritative match.
+-- The first player is White, the second is Black; additional players spectate or join a team.
 local playerSides = {}
 local seatPlayers = { White = nil, Black = nil }
 local hostUserId = nil
