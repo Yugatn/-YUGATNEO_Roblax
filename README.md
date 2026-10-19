@@ -1,33 +1,45 @@
-# YUGATNEO Roblox — Chess Arena
+# YUGATNEO Roblox — Chess Arena + Weapons
 
-A Roblox Studio chess prototype for the YUGATNEO world.
+Branch: `feature/full-chess-game`
 
-## Included
-- Automatically generated 8×8 chessboard and 32 starting pieces.
-- Distinct piece silhouettes plus a letter badge: P (pawn), R (rook), N (knight), B (bishop), Q (queen), K (king).
-- Click a piece, then click a destination square to move it.
-- Turn-based play for White and Black.
-- Captures and basic movement rules for all six piece types.
-- On-screen controls: instructions, cancel selection, and reset/new game.
-- Server-side move validation for basic piece movement.
+## Chess
 
-## Prototype limitations
-This is not yet a complete tournament chess implementation. Check/checkmate validation, castling, en passant, pawn promotion, separate simultaneous matches, matchmaking, persistent ratings, and spectator tools are not implemented yet. The reset button restarts the shared board for everyone in the server.
+1. `git switch feature/full-chess-game && git pull`
+2. `rojo serve default.project.json`
+3. Play in Studio → walk to **blue Join Pad** → hold **E**
+4. Second player joins → both press **I'M READY**
+5. Click piece → green legal squares → click destination
 
-## Run in Roblox Studio (manual setup)
-1. Open Roblox Studio and create a **Baseplate** experience.
-2. In **ServerScriptService**, create a **Script** named `ChessArena`; paste in `src/server/ChessArena.server.lua`.
-3. In **StarterPlayer > StarterPlayerScripts**, create a **LocalScript** named `ChessControls`; paste in `src/client/ChessControls.client.lua`.
-4. Press **Play**. The server generates the board and pieces, and the client script adds the control panel.
+Three tables at X = 0, +55, −55. Camera locks (Scriptable) during the match.
 
-Both scripts are required for the on-screen controls. If you only install the server script, the board and pieces will appear but the control panel will not.
+### Rules
+- Legal moves, check / checkmate / stalemate
+- Castling, en passant, promotion choice
+- **Fifty-move rule** (auto-draw at 100 half-moves without capture/pawn move)
+- **Threefold repetition** (auto-draw)
+- Resign, mutual draw offer, disconnect = technical loss
 
-## GitHub, Rojo, and publishing
-The `default.project.json` maps both scripts into Roblox services. For live sync, install Rojo and its Studio plugin, clone this repository locally, then run `rojo serve` and connect the plugin in Studio. GitHub changes reach Studio after you pull them into the local checkout; GitHub does not directly connect to your running Studio session.
+## Weapons (outside chess matches)
 
-The GitHub Actions workflow `.github/workflows/roblox-ci.yml` builds the place on pushes and pull requests. It can also publish manually to Roblox when you run the workflow with publishing enabled and configure `ROBLOX_API_KEY`, `ROBLOX_UNIVERSE_ID`, and `ROBLOX_PLACE_ID` in GitHub Actions secrets. Publishing is intentionally manual by default. See [the full setup guide](docs/ROBLOX_GITHUB_SYNC.md).
+| Key | Weapon | Damage | Range |
+|-----|--------|--------|-------|
+| 1 | Pistol | 18 | 180 |
+| 2 | Rifle | 28 | 320 |
+| 3 | SMG | 12 | 140 |
 
-## Project files
-- `src/server/ChessArena.server.lua` — server-side board, piece generation, turn handling, captures, and basic move validation.
-- `src/client/ChessControls.client.lua` — on-screen buttons and player instructions.
-- `default.project.json` — Rojo project mapping.
+Left mouse button fires. Shooting is **blocked** while `InChessMatch` is true (seated at a table).
+
+## Files
+
+- `src/server/ChessEngine.lua` — rules + draws
+- `src/server/MatchTable.lua` — one table
+- `src/server/ChessArena.server.lua` — 3 tables, membership
+- `src/server/WeaponSystem.server.lua` — loadout + raycast
+- `src/client/ChessControls.client.lua` — chess HUD + camera
+- `src/client/WeaponControls.client.lua` — weapon HUD
+
+## Known limits
+
+- Piece models are procedural (improved silhouettes, not MeshId assets)
+- No wager / challenge modes yet
+- Not play-tested inside Studio from this environment
