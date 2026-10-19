@@ -815,3 +815,47 @@ Players.PlayerAdded:Connect(stylePlayer)
 
 setStatus("White to move | Walk to the board and choose Practice vs Bot in the HUD")
 print("YUGATNEO Chess Arena loaded: board, labelled pieces, and game controls created.")
+
+
+-- Dedicated walk-on pad for a true top-down chess-board view.
+-- The pad is adjacent to the board; stepping onto it switches only that player's camera.
+local chessViewPad = Instance.new("Part")
+chessViewPad.Name = "ChessTopDownViewPad"
+chessViewPad.Anchored = true
+chessViewPad.CanCollide = true
+chessViewPad.Size = Vector3.new(10, 0.6, 10)
+chessViewPad.Position = Vector3.new(24, 0.35, 0)
+chessViewPad.Material = Enum.Material.Neon
+chessViewPad.Color = Color3.fromRGB(64, 170, 125)
+chessViewPad.Parent = worldFolder
+
+local chessViewSign = Instance.new("BillboardGui")
+chessViewSign.Name = "ChessViewSign"
+chessViewSign.Size = UDim2.fromOffset(220, 54)
+chessViewSign.StudsOffset = Vector3.new(0, 3.5, 0)
+chessViewSign.AlwaysOnTop = true
+chessViewSign.Parent = chessViewPad
+local chessViewText = Instance.new("TextLabel")
+chessViewText.Size = UDim2.fromScale(1, 1)
+chessViewText.BackgroundColor3 = Color3.fromRGB(17, 22, 32)
+chessViewText.BackgroundTransparency = 0.1
+chessViewText.TextColor3 = Color3.fromRGB(245, 245, 245)
+chessViewText.Font = Enum.Font.GothamBold
+chessViewText.TextScaled = true
+chessViewText.Text = "STEP HERE • CHESS VIEW"
+chessViewText.Parent = chessViewSign
+local signCorner = Instance.new("UICorner")
+signCorner.CornerRadius = UDim.new(0, 10)
+signCorner.Parent = chessViewText
+
+local viewCooldown = {}
+chessViewPad.Touched:Connect(function(hit)
+	local character = hit and hit:FindFirstAncestorOfClass("Model")
+	local player = character and Players:GetPlayerFromCharacter(character)
+	if not player or viewCooldown[player.UserId] then return end
+	viewCooldown[player.UserId] = true
+	controlEvent:FireClient(player, "ChessView", Vector3.new(0, 1, 0))
+	task.delay(2, function()
+		viewCooldown[player.UserId] = nil
+	end)
+end)
