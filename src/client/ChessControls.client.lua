@@ -178,7 +178,7 @@ local helpText = Instance.new("TextLabel")
 helpText.Position = UDim2.new(0, 14, 0, 44)
 helpText.Size = UDim2.new(1, -28, 1, -92)
 helpText.BackgroundTransparency = 1
-helpText.Text = "1. Click one of your pieces.\n2. Green squares show legal destinations.\n3. Click a destination to complete the move.\n\nIncludes check, checkmate, stalemate, castling, en passant and automatic queen promotion.\n\nWhite moves first. Capturing the king is never a legal move."
+helpText.Text = "1. Click one of your pieces.\n2. Green squares show legal destinations.\n3. Click a destination to complete the move.\n\nIncludes check, checkmate, stalemate, castling, en passant and selectable promotion to queen, rook, bishop or knight.\n\nWhite moves first. Capturing the king is never a legal move."
 helpText.TextColor3 = COLORS.text
 helpText.Font = Enum.Font.Gotham
 helpText.TextSize = 12
@@ -260,7 +260,14 @@ local function getTileColor(row, col)
 end
 
 controlEvent.OnClientEvent:Connect(function(action, payload, fromRow, fromCol)
-	if action == "PromotionRequired" then
+	if action == "SeatAssigned" then
+		local assigned = tostring(payload)
+		if assigned == "White" or assigned == "Black" then
+			statusLabel.Text = "You are " .. assigned .. " — waiting for both players"
+		else
+			statusLabel.Text = "Spectator — both seats are occupied"
+		end
+	elseif action == "PromotionRequired" then
 		promotionPanel.Visible = true
 	elseif action == "PromotionHide" then
 		promotionPanel.Visible = false
