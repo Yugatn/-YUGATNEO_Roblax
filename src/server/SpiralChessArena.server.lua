@@ -5,7 +5,7 @@
 local Players = game:GetService("Players")
 
 local TILE = 4
-local CENTER = Vector3.new(500, 121, 0)
+local CENTER = Vector3.new(500, 130, 0)
 local BOARD_Y = CENTER.Y
 local PIECE_Y = BOARD_Y + 0.18
 local ORIGIN = CENTER
