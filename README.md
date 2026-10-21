@@ -1,33 +1,46 @@
-# YUGATNEO Roblox — Chess Arena
+# YUGATNEO Roblox — Сюжет Икс: MATRIX
 
-A Roblox Studio chess prototype for the YUGATNEO world.
+A Roblox experience prototype for exploring the world of **Сюжет Икс** in a neon, Matrix-inspired city.
 
-## Included
-- Automatically generated 8×8 chessboard and 32 starting pieces.
-- Distinct piece silhouettes plus a letter badge: P (pawn), R (rook), N (knight), B (bishop), Q (queen), K (king).
-- Click a piece, then click a destination square to move it.
-- Turn-based play for White and Black.
-- Captures and basic movement rules for all six piece types.
-- On-screen controls: instructions, cancel selection, and reset/new game.
-- Server-side move validation for basic piece movement.
+## Current experience on this branch
 
-## Prototype limitations
-This is not yet a complete tournament chess implementation. Check/checkmate validation, castling, en passant, pawn promotion, separate simultaneous matches, matchmaking, persistent ratings, and spectator tools are not implemented yet. The reset button restarts the shared board for everyone in the server.
+- Giant floating hologram: **YUGATNEO MATRIX**.
+- Neon grid, abstract data towers, raised districts, bridges, memory garden, signal maze, drone range, and observation tower.
+- Six collectible memory fragments inspired by the Story-X canon: the Other, Mira, the Trace, the Empties, the Right to Exit, and X.
+- Three short reasoning terminals about evidence, other-subjects, and consent.
+- A stylized, harmless pulse tool for shooting training drones. Players cannot be damaged by it.
+- Mission HUD, progress counter, answer interface, and feedback messages.
+- Procedural geometry; no external asset dependencies.
 
-## Run in Roblox Studio (manual setup)
-1. Open Roblox Studio and create a **Baseplate** experience.
-2. In **ServerScriptService**, create a **Script** named `ChessArena`; paste in `src/server/ChessArena.server.lua`.
-3. In **StarterPlayer > StarterPlayerScripts**, create a **LocalScript** named `ChessControls`; paste in `src/client/ChessControls.client.lua`.
-4. Press **Play**. The server generates the board and pieces, and the client script adds the control panel.
+## Story-X foundation
 
-Both scripts are required for the on-screen controls. If you only install the server script, the board and pieces will appear but the control panel will not.
+The experience adapts the project's central ideas into play:
 
-## GitHub, Rojo, and publishing
-The `default.project.json` maps both scripts into Roblox services. For live sync, install Rojo and its Studio plugin, clone this repository locally, then run `rojo serve` and connect the plugin in Studio. GitHub changes reach Studio after you pull them into the local checkout; GitHub does not directly connect to your running Studio session.
+- **Model is not subject.** A profile, score, or memory is not the person.
+- **The observer is part of the system.** Mira observes Eugene too; observation changes what happens next.
+- **Observation is not interpretation.** A pattern can be meaningful, accidental, or incomplete.
+- **Right to exit.** Safe experiments must allow a participant to stop or leave.
+- **X is the remainder.** No single map or explanation exhausts reality.
 
-The GitHub Actions workflow `.github/workflows/roblox-ci.yml` builds the place on pushes and pull requests. It can also publish manually to Roblox when you run the workflow with publishing enabled and configure `ROBLOX_API_KEY`, `ROBLOX_UNIVERSE_ID`, and `ROBLOX_PLACE_ID` in GitHub Actions secrets. Publishing is intentionally manual by default. See [the full setup guide](docs/ROBLOX_GITHUB_SYNC.md).
+The game is a fictional experience, not a scientific claim.
 
-## Project files
-- `src/server/ChessArena.server.lua` — server-side board, piece generation, turn handling, captures, and basic move validation.
-- `src/client/ChessControls.client.lua` — on-screen buttons and player instructions.
-- `default.project.json` — Rojo project mapping.
+## Run in Roblox Studio
+
+1. Clone the repository locally.
+2. Install Rokit and Rojo. If the repository has no `rokit.toml`, run `rokit init`, then `rokit add rojo-rbx/rojo` and `rokit install`.
+3. In the repository root, run `rojo serve`.
+4. Connect the Rojo plugin in Roblox Studio.
+5. Press **Play** and inspect the Output panel.
+
+The Rojo mapping in this branch points to `src/server/StoryXMatrixWorld.server.lua` and `src/client/StoryXMatrixHUD.client.lua`. The earlier Chess Arena scripts remain in the repository but are not the active experience mapping on this branch.
+
+## Controls
+
+- **WASD** — move; mouse — look.
+- **E** — interact with memory fragments and terminals.
+- **F** or on-screen **PULSE** — fire a pulse at training drones.
+- Type an answer at a reasoning terminal and submit it.
+
+## Status
+
+This is the first playable implementation of the world code, not a confirmed Roblox Studio test. Run it in Studio before publishing. Saving progress, audio, advanced animation, accessibility/mobile polish, and extended playtesting remain future work.
