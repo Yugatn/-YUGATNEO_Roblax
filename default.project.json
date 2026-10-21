@@ -1,19 +1,22 @@
 {
-  "name": "YUGATNEO_Roblox",
+  "name": "YUGATNEO_MATRIX",
   "tree": {
     "$className": "DataModel",
+    "Workspace": {
+      "$className": "Workspace"
+    },
     "ServerScriptService": {
       "$className": "ServerScriptService",
-      "ChessArena": {
-        "$path": "src/server/ChessArena.server.lua"
+      "StoryXMatrixWorld": {
+        "$path": "src/server/StoryXMatrixWorld.server.lua"
       }
     },
     "StarterPlayer": {
       "$className": "StarterPlayer",
       "StarterPlayerScripts": {
         "$className": "StarterPlayerScripts",
-        "ChessControls": {
-          "$path": "src/client/ChessControls.client.lua"
+        "StoryXMatrixHUD": {
+          "$path": "src/client/StoryXMatrixHUD.client.lua"
         }
       }
     }
