@@ -2,22 +2,19 @@
   "name": "YUGATNEO_MATRIX",
   "tree": {
     "$className": "DataModel",
-    "Workspace": {
-      "$className": "Workspace"
-    },
+    "Workspace": {"$className": "Workspace"},
     "ServerScriptService": {
       "$className": "ServerScriptService",
-      "StoryXMatrixWorld": {
-        "$path": "src/server/StoryXMatrixWorld.server.lua"
-      }
+      "StoryXMatrixWorld": {"$path": "src/server/StoryXMatrixWorld.server.lua"},
+      "SpiralChessLevel": {"$path": "src/server/SpiralChessLevel.server.lua"},
+      "SpiralChessArena": {"$path": "src/server/SpiralChessArena.server.lua"}
     },
     "StarterPlayer": {
       "$className": "StarterPlayer",
       "StarterPlayerScripts": {
         "$className": "StarterPlayerScripts",
-        "StoryXMatrixHUD": {
-          "$path": "src/client/StoryXMatrixHUD.client.lua"
-        }
+        "StoryXMatrixHUD": {"$path": "src/client/StoryXMatrixHUD.client.lua"},
+        "SpiralChessControls": {"$path": "src/client/SpiralChessControls.client.lua"}
       }
     }
   }
