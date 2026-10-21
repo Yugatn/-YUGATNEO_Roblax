@@ -44,3 +44,8 @@ The Rojo mapping in this branch points to `src/server/StoryXMatrixWorld.server.l
 ## Status
 
 This is the first playable implementation of the world code, not a confirmed Roblox Studio test. Run it in Studio before publishing. Saving progress, audio, advanced animation, accessibility/mobile polish, and extended playtesting remain future work.
+
+
+## Spiral Chess Summit
+
+Branch `feature/chess-spiral-level` adds a 4.5-turn neon spiral, a glowing central spine, an approach bridge, and a dedicated chess summit. See [README_SPIRAL_CHESS.md](README_SPIRAL_CHESS.md) for setup and current chess limitations.
