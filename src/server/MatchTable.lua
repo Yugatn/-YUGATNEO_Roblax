@@ -97,7 +97,7 @@ function MatchTable:_callJoin(player)
 end
 
 function MatchTable:_callLeave(player)
-	if self.onLeave and player then self.onLeave(player) end
+	if self.onLeave and typeof(player) == "Instance" then self.onLeave(player) end
 end
 
 function MatchTable:getPublicState()
@@ -130,7 +130,7 @@ function MatchTable:getPublicState()
 end
 
 function MatchTable:_setPrompt(on)
-	if self.joinPrompt then self.joinPrompt.Enabled = on end
+	if self.joinPrompt then self.joinPrompt.Enabled = on and not self.queueOnly end
 end
 
 function MatchTable:_updateStatus()
@@ -210,6 +210,7 @@ function MatchTable:_buildWorld()
 	prompt.MaxActivationDistance = 14
 	prompt.RequiresLineOfSight = false
 	prompt.Parent = joinPad
+	prompt.Enabled = not self.queueOnly
 	self.joinPrompt = prompt
 	prompt.Triggered:Connect(function(player)
 		if not self.queueOnly then self:requestJoin(player) end
