@@ -9,6 +9,7 @@ local openId=nil
 local selectedParagraph=nil
 local selectedAnswer=nil
 local activeRace=nil
+local pendingBook=nil
 local localNotes={}
 local gui=Instance.new("ScreenGui")
 gui.Name="YugatneoLibraryGUI"
@@ -214,6 +215,15 @@ event.OnClientEvent:Connect(function(action,a,b)
  if action=="Catalog" then
   for _,book in ipairs(a or {}) do books[book.id]=book end
   if not activeRace then updateSide() end
+  if pendingBook and books[pendingBook] then
+   local id=pendingBook
+   pendingBook=nil
+   panel.Visible=true
+   activeRace=nil
+   head.Text="LIBRARY X / READING ROOM"
+   updateSide()
+   openBook(id)
+  end
  elseif action=="OpenBook" then
   if not next(books) then event:FireServer("GetCatalog") end
   if books[a] then
@@ -223,7 +233,7 @@ event.OnClientEvent:Connect(function(action,a,b)
    updateSide()
    openBook(a)
   else
-   -- First interaction requests catalog; player may open again after it loads.
+   pendingBook=a
    event:FireServer("GetCatalog")
   end
  elseif action=="RaceStart" then
