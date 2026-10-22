@@ -27,6 +27,24 @@
       },
       "SpiralVehicles": {
         "$path": "src/server/SpiralVehicles.server.lua"
+      },
+      "LibraryCatalog": {
+        "$path": "src/server/LibraryCatalog.lua"
+      },
+      "WorldRewards": {
+        "$path": "src/server/WorldRewards.lua"
+      },
+      "LibraryWorld": {
+        "$path": "src/server/LibraryWorld.server.lua"
+      },
+      "CognitiveArcade": {
+        "$path": "src/server/CognitiveArcade.server.lua"
+      },
+      "ArcadeLibrary": {
+        "$path": "src/server/ArcadeLibrary.lua"
+      },
+      "RetroEngine": {
+        "$path": "src/server/RetroEngine.lua"
       }
     },
     "StarterPlayer": {
@@ -41,6 +59,12 @@
         },
         "StoryXMatrixHUD": {
           "$path": "src/client/StoryXMatrixHUD.client.lua"
+        },
+        "LibraryReader": {
+          "$path": "src/client/LibraryReader.client.lua"
+        },
+        "CognitiveArcade": {
+          "$path": "src/client/CognitiveArcade.client.lua"
         }
       }
     }
