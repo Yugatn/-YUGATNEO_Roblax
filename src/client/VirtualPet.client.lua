@@ -58,6 +58,8 @@ panel.BorderSizePixel = 0
 panel.Visible = false
 panel.Parent = gui
 round(panel,14)
+local panelScale = Instance.new("UIScale")
+panelScale.Parent = panel
 local stroke = Instance.new("UIStroke")
 stroke.Color = Color3.fromRGB(70,220,176)
 stroke.Thickness = 1.5
@@ -171,8 +173,10 @@ local lastSpecies=nil
 local function positionUI()
     local camera=workspace.CurrentCamera
     local width=camera and camera.ViewportSize.X or 1100
+    local height=camera and camera.ViewportSize.Y or 800
+    panelScale.Scale=math.clamp((height-100)/405,0.66,1)
     if width < 760 then
-        toggle.Position=UDim2.new(1,-113,0,450)
+        toggle.Position=UDim2.new(1,-113,0,math.min(450,math.max(75,height-56)))
         panel.Position=UDim2.new(1,-10,0,65)
         panel.Size=UDim2.fromOffset(282,405)
     else
@@ -181,7 +185,17 @@ local function positionUI()
     end
 end
 positionUI()
-workspace:GetPropertyChangedSignal("CurrentCamera"):Connect(positionUI)
+local cameraViewportConnection
+local function watchCamera()
+    if cameraViewportConnection then cameraViewportConnection:Disconnect() end
+    local camera=workspace.CurrentCamera
+    if camera then
+        cameraViewportConnection=camera:GetPropertyChangedSignal("ViewportSize"):Connect(positionUI)
+    end
+    positionUI()
+end
+workspace:GetPropertyChangedSignal("CurrentCamera"):Connect(watchCamera)
+watchCamera()
 toggle.Activated:Connect(function()
     positionUI()
     panel.Visible=not panel.Visible
