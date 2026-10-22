@@ -152,4 +152,33 @@ create("QuietRoom", Vector3.new(19, 1, 17), CFrame.new(CENTER.X + 86, 0.4, -47),
     Color3.fromRGB(14, 26, 44), Enum.Material.Slate, true)
 sign("QuietRoomLabel", Vector3.new(CENTER.X + 86, 13, -47), "QUIET ROOM  /  THE RIGHT TO EXIT", GREEN, 430)
 
+-- District signs and optional gateways distribute play across different spiral heights.
+-- Future districts clearly say PLANNED rather than presenting unfinished games as playable.
+local districtConfigs = {
+    {step=12,name="CHESS STRATEGY",target=Vector3.new(CENTER.X,5,48),tint=GREEN},
+    {step=30,name="THE LIBRARY X",target=Vector3.new(-139,5,64),tint=CYAN},
+    {step=49,name="COGNITIVE ARCADE",target=Vector3.new(104,5,30),tint=PURPLE},
+    {step=69,name="RETRO ARCADE / PLANNED",tint=GREEN},
+    {step=91,name="HIDE AND SEEK / PLANNED",tint=PURPLE},
+    {step=112,name="CHECKERS AND ECONOMY / PLANNED",tint=CYAN},
+    {step=132,name="CREATIVE STUDIO / PLANNED",tint=GREEN},
+}
+for _, config in ipairs(districtConfigs) do
+    local point = pathPoint(config.step)
+    local fromCenter = Vector3.new(point.X - CENTER.X, 0, point.Z - CENTER.Z).Unit
+    local platformCenter = point + fromCenter * 27
+    create("DistrictBridge_" .. config.step, Vector3.new(11, 1.4, 30),
+        CFrame.lookAt((point + platformCenter) * 0.5, platformCenter), DARK,
+        Enum.Material.Metal, true)
+    create("DistrictPlatform_" .. config.step, Vector3.new(28, 1.4, 22),
+        CFrame.new(platformCenter), Color3.fromRGB(12, 32, 49),
+        Enum.Material.Metal, true)
+    sign("DistrictSign_" .. config.step, platformCenter + Vector3.new(0, 9, 0),
+        "STORY X / " .. config.name, config.tint, 560)
+    if config.target then
+        portal("DistrictPortal_" .. config.step,
+            platformCenter + Vector3.new(0, 1, 0), config.name, config.target)
+    end
+end
+
 print("[YUGATNEO] Spiral dimension ready: chess hall, 3-revolution road, portals, summit.")
