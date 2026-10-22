@@ -48,6 +48,9 @@
       },
       "RetroCabinet": {
         "$path": "src/server/RetroCabinet.server.lua"
+      },
+      "RetroArcade": {
+        "$path": "src/server/RetroArcade.server.lua"
       }
     },
     "StarterPlayer": {
@@ -71,6 +74,9 @@
         },
         "RetroCabinet": {
           "$path": "src/client/RetroCabinet.client.lua"
+        },
+        "RetroArcade": {
+          "$path": "src/client/RetroArcade.client.lua"
         }
       }
     }
