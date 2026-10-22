@@ -80,6 +80,7 @@ button("↑",0.40,0.78,0.2,function()turn("Up")end)
 button("←",0.17,0.86,0.2,function()turn("Left")end)
 button("↓",0.40,0.86,0.2,function()turn("Down")end)
 button("→",0.63,0.86,0.2,function()turn("Right")end)
+local unlockKeys
 button("EXIT",0.02,0.025,0.19,function()
  active=false
  panel.Visible=false
@@ -103,7 +104,7 @@ local function lockKeys()
   Enum.KeyCode.Up,Enum.KeyCode.Down,Enum.KeyCode.Left,Enum.KeyCode.Right,
   Enum.KeyCode.W,Enum.KeyCode.A,Enum.KeyCode.S,Enum.KeyCode.D)
 end
-local function unlockKeys()
+unlockKeys = function()
  CAS:UnbindAction("YugatneoSnakeDirections")
 end
 
