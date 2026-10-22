@@ -70,3 +70,32 @@ Run **Test > Start** with at least **4 players** to verify the bracket. Test the
 - OrderedDataStore: https://create.roblox.com/docs/reference/engine/classes/OrderedDataStore
 - RemoteEvents: https://create.roblox.com/docs/scripting/events/remote
 - AlignOrientation: https://create.roblox.com/docs/reference/engine/classes/AlignOrientation
+
+
+## New: library, cognitive arcade, 8-bit cabinet and cultural districts
+
+Branch `feature/story-x-library-recreation` extends the previous spiral/chess world without modifying `main` directly. It adds a procedural reading library with four original short Russian-language stories, paragraph-level search and comprehension races, a personal **session-only** notebook, pixel art in the gallery, and server-earned **in-experience** cosmetic rewards. The Library X has a walkable bridge from the Matrix district and can also be reached by a high-level portal on the spiral.
+
+The cognitive arcade is mapped into the live Rojo project: Memory, Attention, Logic, Rule Switching, Spatial Routes, and a holographic duck shooting gallery (no player damage). A separate retro cabinet provides an original Snake game in 8-bit style, including touch/keyboard controls. The 16-bit duel rules engine exists as a module, but its cabinet UI is not yet playable. Retro ROM emulation and unlicensed commercial games are **not** included. Additional planned dimensions are labeled `PLANNED` in the spiral world.
+
+The reading race server determines the shared book challenge and validates correct **book + paragraph + comprehension answer**, then rewards finishers. Shop currently offers original in-experience neon glasses, crown and trail; the future kart paint is disabled until actually integrated with driving.
+
+**Important:** all new scripts are committed, but this branch still needs Roblox Studio playtesting; these descriptions indicate code presence, not a confirmed bug-free build. The notes TextBox is ephemeral and not synced to Roblox DataStore. Testing of persistent reward balances, concurrency and moderation behavior is required before release.
+
+### The handoff documents
+
+- [World design bible (Russian)](docs/STORY_X_WORLD_BIBLE_RU.md): long-term spiral geography, eight development levels, hide-and-seek, chase/tag, checkers, original strategy games, museum, retro rights and reward design.
+- [Manual Studio implementation and handoff (Russian)](docs/MANUAL_BUILD_AND_HANDOFF_RU.md): per-file module mapping, geography, exact feature contracts and testing steps for other developers.
+- [Library content, licensing and reading pedagogy](docs/LIBRARY_CONTENT.md): starter catalog, public-domain candidate verification and content review.
+- [Library & arcade smoke-test source](tests/StoryXLibrarySmokeTest.lua): copy into a temporary Script under `ServerScriptService`; running requires Studio. **Not yet executed.**
+
+### How to test this branch
+
+```sh
+git fetch origin
+git switch feature/story-x-library-recreation
+git pull
+rojo serve default.project.json
+```
+
+Join with at least four multiplayer Studio clients to test the reading races and existing chess tournament separately. Studio API data access must use a **separate test universe**, not a live datastore. The build workflow verifies place generation but does not substitute for multiplayer physics, UI and latency tests.
