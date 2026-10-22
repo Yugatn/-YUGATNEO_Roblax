@@ -52,7 +52,7 @@ expect(Retro.actDuel(duel,1,"Punch",now),"Duel punch input rejected")
 expect(duel.hp[2]==hp,"Punch across the arena should not hit")
 duel.pos={5,7}
 expect(Retro.actDuel(duel,2,"Block",now),"Block input rejected")
-local ok=Retro.actDuel(duel,1,"Punch",now+1)
+local ok=Retro.actDuel(duel,1,"Punch",now+0.5)
 expect(ok and duel.hp[2]>0 and duel.hp[2]<hp,"Block should reduce but not negate damage")
 expect(Retro.actDuel(duel,1,"Nonsense",now+2)==false,"Unknown duel action must fail")
 Retro.timeoutDuel(duel,duel.started+duel.timeLimit+1)
