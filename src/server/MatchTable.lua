@@ -168,7 +168,7 @@ function MatchTable:_buildWorld()
 	floor.Name = "TableFloor"
 	floor.Anchored = true
 	floor.Size = Vector3.new(42, 1, 42)
-	floor.Position = self.origin + Vector3.new(0, -0.2, 0)
+	floor.Position = self.origin + Vector3.new(0, -1.15, 0)
 	floor.Material = Enum.Material.Slate
 	floor.Color = Color3.fromRGB(28, 32, 42)
 	floor.Parent = folder
