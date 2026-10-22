@@ -117,8 +117,33 @@ local function leaderboard()
     end)
     return ranking
 end
+local leaderboardAnchor=make("LibraryReadingLeaderboard",
+    Vector3.new(1,1,1),Vector3.new(145,7,-103),Color3.fromRGB(23,90,100))
+leaderboardAnchor.Transparency=1
+leaderboardAnchor.CanCollide=false
+local leaderGui=Instance.new("BillboardGui")
+leaderGui.Size=UDim2.fromOffset(480,270)
+leaderGui.AlwaysOnTop=true
+leaderGui.MaxDistance=150
+leaderGui.Parent=leaderboardAnchor
+local leaderText=Instance.new("TextLabel")
+leaderText.Size=UDim2.fromScale(1,1)
+leaderText.TextWrapped=true
+leaderText.BackgroundColor3=Color3.fromRGB(7,30,46)
+leaderText.TextColor3=Color3.fromRGB(250,223,124)
+leaderText.Font=Enum.Font.GothamBold
+leaderText.TextSize=15
+leaderText.Parent=leaderGui
 local function shareLeaderboard()
-    remote:FireAllClients("Leaderboard",leaderboard())
+    local records=leaderboard()
+    remote:FireAllClients("Leaderboard",records)
+    local lines={"READING RACE / SESSION RECORDS"}
+    for i,entry in ipairs(records) do
+        if i>6 then break end
+        table.insert(lines,string.format("%d. %s / %s / %.1fs",i,entry.user,entry.bookId,entry.seconds))
+    end
+    if #records==0 then table.insert(lines,"Be the first to finish a story!") end
+    leaderText.Text=table.concat(lines,"\\n")
 end
 local function persistNotes(player)
     if saving[player] then return end
@@ -208,4 +233,5 @@ end)
 game:BindToClose(function()
     for _,player in ipairs(Players:GetPlayers()) do persistNotes(player) end
 end)
+task.defer(shareLeaderboard)
 print("[YUGATNEO] Library open with four original books, private notes and reading races.")
