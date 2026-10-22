@@ -2,6 +2,7 @@
 -- Only a human occupant drives; server applies velocity and steering. No weapons on vehicles.
 local RunService = game:GetService("RunService")
 local Players = game:GetService("Players")
+local Rewards = require(script.Parent:WaitForChild("RewardService"))
 local folder = Instance.new("Folder")
 folder.Name = "YUGATNEO_SerpentineVehicles"
 folder.Parent = workspace
@@ -85,7 +86,7 @@ local function makeKart(index, position, color)
 
     local startCF = chassis.CFrame
     local state = {model = model, chassis = chassis, seat = seat, aim = stabilizer,
-        heading = math.pi / 2, start = startCF, lastReset = 0}
+        heading = math.pi / 2, start = startCF, lastReset = 0, baseColor = color}
     prompt.Triggered:Connect(function(player)
         if os.clock() - state.lastReset < 3 then return end
         if seat.Occupant then return end
@@ -128,6 +129,9 @@ RunService.Heartbeat:Connect(function(dt)
                 occupant.Sit = false
                 continue
             end
+            local profile = Rewards.get(driver)
+            local violet = profile and profile.unlocked.VioletKart and profile.equipped == "VioletKart"
+            hull.Color = violet and Color3.fromRGB(160, 75, 225) or car.baseColor
             local throttle = math.clamp(seat.ThrottleFloat, -1, 1)
             local steer = math.clamp(seat.SteerFloat, -1, 1)
             local speed = hull.AssemblyLinearVelocity.Magnitude
