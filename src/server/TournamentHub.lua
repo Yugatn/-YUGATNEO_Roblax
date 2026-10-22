@@ -160,7 +160,7 @@ function Hub:finished(result)
         if self.assignments[result.tableId] == assignment then self.assignments[result.tableId] = nil end
         if assignment and not winner and self.current == current then
             self:seriesMatch(result.tableId, assignment.white, assignment.black, assignment.round, assignment.idx)
-        elseif current and self.current == current and current.stage == "Champion" then
+        elseif assignment and assignment.round == "Final" and current and self.current == current and current.stage == "Champion" then
             self.current = nil
         end
         self:final()
