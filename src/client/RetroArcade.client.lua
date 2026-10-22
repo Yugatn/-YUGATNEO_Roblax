@@ -1,7 +1,7 @@
 -- Original Spiral Snake: client renders board and sends only turn requests.
 local Players=game:GetService("Players")
 local ReplicatedStorage=game:GetService("ReplicatedStorage")
-local UIS=game:GetService("UserInputService")
+local CAS=game:GetService("ContextActionService")
 local player=Players.LocalPlayer
 local event=ReplicatedStorage:WaitForChild("YugatneoRetro")
 local gui=Instance.new("ScreenGui")
@@ -83,25 +83,36 @@ button("→",0.63,0.86,0.2,function()turn("Right")end)
 button("EXIT",0.02,0.025,0.19,function()
  active=false
  panel.Visible=false
+ unlockKeys()
  event:FireServer("StopSnake")
 end)
 button("AGAIN",0.81,0.025,0.17,function()
  event:FireServer("StartSnake")
 end)
-UIS.InputBegan:Connect(function(input,used)
- if used or not panel.Visible then return end
+local function controls(name,state,input)
+ if state~=Enum.UserInputState.Begin or not active then return Enum.ContextActionResult.Sink end
  local k=input.KeyCode
  if k==Enum.KeyCode.Up or k==Enum.KeyCode.W then turn("Up")
  elseif k==Enum.KeyCode.Down or k==Enum.KeyCode.S then turn("Down")
  elseif k==Enum.KeyCode.Left or k==Enum.KeyCode.A then turn("Left")
- elseif k==Enum.KeyCode.Right or k==Enum.KeyCode.D then turn("Right")
- end
-end)
+ elseif k==Enum.KeyCode.Right or k==Enum.KeyCode.D then turn("Right") end
+ return Enum.ContextActionResult.Sink
+end
+local function lockKeys()
+ CAS:BindActionAtPriority("YugatneoSnakeDirections",controls,false,3000,
+  Enum.KeyCode.Up,Enum.KeyCode.Down,Enum.KeyCode.Left,Enum.KeyCode.Right,
+  Enum.KeyCode.W,Enum.KeyCode.A,Enum.KeyCode.S,Enum.KeyCode.D)
+end
+local function unlockKeys()
+ CAS:UnbindAction("YugatneoSnakeDirections")
+end
+
 local oldW,oldH=0,0
 event.OnClientEvent:Connect(function(action,data)
  if action=="SnakeState" then
   active=data.alive
   panel.Visible=true
+  if active then lockKeys() else unlockKeys() end
   if data.width~=oldW or data.height~=oldH then
    oldW,oldH=data.width,data.height
    build(oldW,oldH)
@@ -119,9 +130,11 @@ event.OnClientEvent:Connect(function(action,data)
   status.Text="SCORE: "..data.score.." • "..(data.alive and "USE ARROWS / WASD" or "GAME OVER")
  elseif action=="SnakeEnd" then
   active=false
+  unlockKeys()
   status.Text="FINAL: "..tostring(data.score).." • + "..tostring(data.reward).." X TOKENS"
  elseif action=="SnakeExit" then
   active=false
   panel.Visible=false
+  unlockKeys()
  end
 end)
