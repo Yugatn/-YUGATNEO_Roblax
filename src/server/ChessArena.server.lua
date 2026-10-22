@@ -72,6 +72,13 @@ end
 local function assign(player, tableId)
     membership[player.UserId] = tableId
     player:SetAttribute("InChessMatch", tableId ~= nil)
+    if tableId then
+        local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+        local tableLocation = games[tableId] and games[tableId].origin
+        if root and tableLocation then
+            root.CFrame = CFrame.new(tableLocation + Vector3.new(0, 5, 33))
+        end
+    end
 end
 for _, conf in ipairs({
     {id = "1", position = Vector3.new(447, 1, 0)},
