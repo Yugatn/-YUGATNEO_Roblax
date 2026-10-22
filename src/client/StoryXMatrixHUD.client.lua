@@ -10,6 +10,7 @@ local noticeEvent = ReplicatedStorage:WaitForChild("StoryXNotice") :: RemoteEven
 local puzzleEvent = ReplicatedStorage:WaitForChild("StoryXPuzzle") :: RemoteEvent
 local answerEvent = ReplicatedStorage:WaitForChild("StoryXAnswer") :: RemoteEvent
 local pulseEvent = ReplicatedStorage:WaitForChild("StoryXPulse") :: RemoteEvent
+local modeEvent = ReplicatedStorage:WaitForChild("StoryXPulseMode") :: RemoteEvent
 local progressEvent = ReplicatedStorage:WaitForChild("StoryXProgress") :: RemoteEvent
 
 local gui = Instance.new("ScreenGui")
@@ -71,13 +72,45 @@ pulse.Parent = gui
 round(pulse, 14)
 
 local function firePulse()
+	if player:GetAttribute("InChessMatch") then return end
 	local camera = workspace.CurrentCamera
 	if camera then pulseEvent:FireServer(camera.CFrame.LookVector.Unit) end
 end
 pulse.Activated:Connect(firePulse)
+
+local loadout = Instance.new("Frame")
+loadout.Name = "TrainingLoadout"
+loadout.AnchorPoint = Vector2.new(1, 1)
+loadout.Position = UDim2.new(1, -22, 1, -87)
+loadout.Size = UDim2.fromOffset(252, 43)
+loadout.BackgroundColor3 = Color3.fromRGB(8, 18, 36)
+loadout.BorderSizePixel = 0
+loadout.Parent = gui
+round(loadout, 8)
+local function selectMode(mode)
+    if player:GetAttribute("InChessMatch") then return end
+    modeEvent:FireServer(mode)
+    pulse.Text = mode:upper() .. " [F]"
+end
+for i, mode in ipairs({"Pulse", "Rapid", "Charged"}) do
+    local button = Instance.new("TextButton")
+    button.Name = mode
+    button.Position = UDim2.fromOffset(4 + (i - 1) * 83, 4)
+    button.Size = UDim2.fromOffset(79, 35)
+    button.BackgroundColor3 = Color3.fromRGB(31, 85, 112)
+    button.TextColor3 = Color3.new(1, 1, 1)
+    button.Font = Enum.Font.GothamBold
+    button.TextSize = 11
+    button.Text = mode
+    button.Parent = loadout
+    button.Activated:Connect(function() selectMode(mode) end)
+end
 UserInputService.InputBegan:Connect(function(input, processed)
 	if processed then return end
-	if input.KeyCode == Enum.KeyCode.F then firePulse() end
+	if input.KeyCode == Enum.KeyCode.F then firePulse()
+    elseif input.KeyCode == Enum.KeyCode.One then selectMode("Pulse")
+    elseif input.KeyCode == Enum.KeyCode.Two then selectMode("Rapid")
+    elseif input.KeyCode == Enum.KeyCode.Three then selectMode("Charged") end
 end)
 
 local toast = Instance.new("Frame")
