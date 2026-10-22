@@ -40,7 +40,7 @@ local entries={
     {"NeonGlasses","Neon glasses",30},
     {"Halo","Observer halo",65},
     {"MatrixCrown","Matrix crown",100},
-    {"VioletKart","Violet kart (reserved)",80},
+    {"VioletKart","Violet kart paint",80},
 }
 for i,entry in ipairs(entries) do
     local b=Instance.new("TextButton")
