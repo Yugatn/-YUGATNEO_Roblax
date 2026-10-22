@@ -100,7 +100,7 @@ local function load(p)
  if profiles[p]~=data then return end
  if ok then
   if type(snapshot)=="table" then
-   data.coins=math.max(0,math.floor(tonumber(snapshot.coins) or 0))
+   data.coins=math.max(0,math.floor(tonumber(snapshot.coins) or 0)+data.delta)
    if type(snapshot.owned)=="table" then
     for item,value in pairs(snapshot.owned) do if Rewards.items[item] and value==true then data.owned[item]=true end end
    end
