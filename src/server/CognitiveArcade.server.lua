@@ -4,6 +4,7 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local Arcade = require(script.Parent:WaitForChild("ArcadeLibrary"))
+local Rewards = require(script.Parent:WaitForChild("RewardService"))
 
 local event = ReplicatedStorage:FindFirstChild("ArcadeEvent") or Instance.new("RemoteEvent")
 event.Name = "ArcadeEvent"
@@ -122,6 +123,7 @@ prompt(galleryStart, "START", "Duck gallery", function(player)
         local s = activeGallery[player]
         if s and s.expires <= os.clock() then
             activeGallery[player] = nil
+            if s.score>=10 then Rewards.awardOnce(player,"first_duck_gallery",10) end
             event:FireClient(player, "DuckEnd", s.score)
         end
     end)
@@ -200,7 +202,10 @@ event.OnServerEvent:Connect(function(player, action, sessionId, response)
     if not near(player, plaza, 86) then sessions[player] = nil return end
     sessions[player] = nil
     local correct = Arcade.check(s.mode, s.secret, response)
-    if correct then playerScores[player] = (playerScores[player] or 0) + 1 end
+    if correct then
+        playerScores[player] = (playerScores[player] or 0) + 1
+        Rewards.awardOnce(player,"first_"..s.mode,12)
+    end
     event:FireClient(player, "Result", correct, s.mode, playerScores[player] or 0)
 end)
 
