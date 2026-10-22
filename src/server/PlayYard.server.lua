@@ -117,7 +117,8 @@ local function start(mode)
     local queue=queued[mode]
     if #queue<minimum then return end
     local selected={}
-    while #selected<math.min(#queue,10) do
+    local maxPlayers=math.min(#queue,10)
+    while #selected<maxPlayers do
         local id=table.remove(queue,1)
         if alivePlayer(id) then table.insert(selected,id) end
     end
@@ -190,7 +191,10 @@ RunService.Heartbeat:Connect(function(dt)
                     local root=p.Character and p.Character:FindFirstChild("HumanoidRootPart")
                     if root and (root.Position-leadRoot.Position).Magnitude<5.5 then
                         -- Prevent tagging through solid obstacles.
-                        local ray=workspace:Raycast(leadRoot.Position,root.Position-leadRoot.Position)
+                        local params=RaycastParams.new()
+                        params.FilterType=Enum.RaycastFilterType.Exclude
+                        params.FilterDescendantsInstances={leader.Character}
+                        local ray=workspace:Raycast(leadRoot.Position,root.Position-leadRoot.Position,params)
                         if not ray or ray.Instance:IsDescendantOf(p.Character) then
                             if s.mode=="Tag" then
                                 s.players[s.leader]="Runner"
