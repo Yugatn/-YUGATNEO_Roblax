@@ -13,7 +13,7 @@ Rewards.items = {
  Glasses = {cost=30,description="Neon glasses: in-world cosmetic"},
  Crown = {cost=75,description="Scholar crown: in-world cosmetic"},
  Trail = {cost=95,description="Explorer sparkle trail: in-world cosmetic"},
- KartCyan = {cost=130,description="Kart paint unlock: integration planned; no driving upgrade yet"}
+ KartCyan = {cost=130,description="Kart paint unlock: not yet active",enabled=false}
 }
 local function profile(p)
  return profiles[p]
@@ -32,6 +32,8 @@ local function decorate(p)
   local old=p.Character:FindFirstChild(item)
   if old then old:Destroy() end
  end
+ local oldTrail=root:FindFirstChild("YugatneoTrail")
+ if oldTrail then oldTrail:Destroy() end
  if data.equipped=="Glasses" or data.equipped=="Crown" then
   local glasses=data.equipped=="Glasses"
   local part=Instance.new("Part")
@@ -77,7 +79,7 @@ event.OnServerEvent:Connect(function(p,action,item)
  local data=profile(p)
  if not data or type(item)~="string" then return end
  local def=Rewards.items[item]
- if not def then return end
+ if not def or def.enabled==false then return end
  if action=="Buy" then
   if data.owned[item] or data.coins<def.cost then return end
   data.coins-=def.cost
