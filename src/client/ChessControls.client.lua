@@ -36,7 +36,7 @@ gui.Parent = player:WaitForChild("PlayerGui")
 
 local panel = Instance.new("Frame")
 panel.Name = "HUD"
-panel.Position = UDim2.new(0, 16, 0, 16)
+panel.Position = UDim2.new(0, 18, 0, 190)
 panel.Size = UDim2.new(0, 300, 0, 220)
 panel.BackgroundColor3 = COLORS.panel
 panel.BorderSizePixel = 0
