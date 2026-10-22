@@ -200,7 +200,7 @@ local function refreshShop()
  local items=states.items or {}
  for _,name in ipairs({"Glasses","Crown","Trail","KartCyan"}) do
   local detail=items[name]
-  if detail then
+  if detail and detail.enabled~=false then
    local owned=states.owned and states.owned[name]
    local caption=name.." / "..(detail.description or "").." / "..detail.cost..
     (owned and " • ОТКРЫТО" or " • КУПИТЬ")
