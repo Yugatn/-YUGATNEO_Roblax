@@ -150,6 +150,23 @@ local function save(player)
     end)
     saving[player] = nil
     if not success then warn("[YUGATNEO Pet] Save failed", player.UserId, err) end
+    return success
+end
+
+local function flush(player)
+    -- A player can leave while an autosave is already running. Avoid dropping
+    -- the final update by waiting for that write before snapshotting again.
+    local deadline = os.clock() + 8
+    while saving[player] and os.clock() < deadline do task.wait(0.1) end
+    if saving[player] then
+        warn("[YUGATNEO Pet] Timed out waiting for in-flight save", player.UserId)
+        return
+    end
+    local success = save(player)
+    if success == false then
+        task.wait(0.4)
+        save(player)
+    end
 end
 
 local function discover(player)
@@ -200,7 +217,7 @@ Players.PlayerAdded:Connect(function(player)
     task.spawn(load, player)
 end)
 Players.PlayerRemoving:Connect(function(player)
-    save(player)
+    flush(player)
     profiles[player] = nil
     offered[player] = nil
     lastRemote[player] = nil
@@ -221,7 +238,7 @@ task.spawn(function()
 end)
 game:BindToClose(function()
     for _, player in ipairs(Players:GetPlayers()) do
-        save(player)
+        flush(player)
     end
 end)
 print("[YUGATNEO PET] Discoverable virtual pets and care persistence initialized.")
