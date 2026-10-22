@@ -68,14 +68,18 @@ function PetRules.act(p, action, now)
     local elapsed = now - (p.lastAction[action] or -10000)
     local cooldown = action == "Play" and 25 or 15
     if elapsed < cooldown then return false, "Подожди немного: питомец отдыхает", cooldown - elapsed end
+    if action == "Play" and p.energy < 12 then
+        return false, "Сначала дай питомцу отдохнуть", 0
+    end
     p.lastAction[action] = now
     if action == "Feed" then
         p.hunger = limit(p.hunger + 22)
         p.joy = limit(p.joy + 2)
     elseif action == "Play" then
-        if p.energy < 12 then return false, "Сначала дай питомцу отдохнуть", 0 end
         p.joy = limit(p.joy + 19)
         p.energy = limit(p.energy - 10)
+        p.hunger = limit(p.hunger - 4)
+        if p.hunger < 20 then p.health = math.max(60, p.health - 2) end
     elseif action == "Rest" then
         p.energy = limit(p.energy + 25)
         p.joy = limit(p.joy + 2)
