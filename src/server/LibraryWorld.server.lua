@@ -206,7 +206,8 @@ schedule=function()
  round={number=roundNumber,entrants=participants,phase="Registration",
   challenge=Catalog.challenge(rng),results={}}
  broadcast()
- task.delay(10,function() start(roundNumber) end)
+ local currentEdition=roundNumber
+ task.delay(10,function() start(currentEdition) end)
 end
 prompt(kiosk,"Join the next reading race",function(p)
  if not closeTo(p,kiosk.Position,18) then return end
