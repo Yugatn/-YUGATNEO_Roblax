@@ -37,7 +37,7 @@ gui.Parent = player:WaitForChild("PlayerGui")
 local panel = Instance.new("Frame")
 panel.Name = "HUD"
 panel.Position = UDim2.new(0, 18, 0, 190)
-panel.Size = UDim2.new(0, 300, 0, 220)
+panel.Size = UDim2.new(0, 300, 0, 302)
 panel.BackgroundColor3 = COLORS.panel
 panel.BorderSizePixel = 0
 panel.Parent = gui
@@ -87,6 +87,8 @@ local readyBtn = makeBtn("Ready", "I'M READY", 100, COLORS.green)
 local cancelBtn = makeBtn("Cancel", "LEAVE TABLE", 138, Color3.fromRGB(69, 79, 96))
 local resignBtn = makeBtn("Resign", "RESIGN", 176, COLORS.red)
 resignBtn.Visible = false
+local drawButton = makeBtn("OfferDraw", "OFFER / ACCEPT DRAW", 214, COLORS.blue)
+local claimButton = makeBtn("ClaimDraw", "CLAIM 3× / 50-MOVE DRAW", 252, Color3.fromRGB(83, 90, 110))
 
 local promotionPanel = Instance.new("Frame")
 promotionPanel.AnchorPoint = Vector2.new(0.5, 0.5)
@@ -163,6 +165,8 @@ end)
 resignBtn.Activated:Connect(function()
 	event:FireServer("Resign")
 end)
+drawButton.Activated:Connect(function() event:FireServer("Draw") end)
+claimButton.Activated:Connect(function() event:FireServer("ClaimDraw") end)
 
 event.OnClientEvent:Connect(function(action, tableId, payload, extra)
 	if action == "Joined" then
@@ -252,6 +256,8 @@ event.OnClientEvent:Connect(function(action, tableId, payload, extra)
 		promotionPanel.Visible = true
 	elseif action == "PromotionHide" then
 		promotionPanel.Visible = false
+	elseif action == "DrawOffered" then
+        statusLabel.Text = "Opponent offers draw. Press OFFER / ACCEPT DRAW to agree."
 	elseif action == "Error" then
 		statusLabel.Text = "Error: " .. tostring(payload)
 	end
