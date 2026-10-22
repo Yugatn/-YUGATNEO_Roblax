@@ -20,7 +20,7 @@ local VALID = {
 	Playing = { Finished = true },
 	Finished = { Idle = true },
 }
-local MODES = { Classic = true, Wager = true, Challenge = true }
+local MODES = { Classic = true }
 
 local function key(r, c)
 	return r .. "," .. c
@@ -37,6 +37,8 @@ function MatchTable.new(config)
 	self.event = config.event
 	self.onJoin = config.onJoin
 	self.onLeave = config.onLeave
+	self.onFinish = config.onFinish
+	self.queueOnly = config.queueOnly == true
 	self.state = "Idle"
 	self.mode = "Classic"
 	self.stakeAmount = 0
@@ -210,7 +212,7 @@ function MatchTable:_buildWorld()
 	prompt.Parent = joinPad
 	self.joinPrompt = prompt
 	prompt.Triggered:Connect(function(player)
-		self:requestJoin(player)
+		if not self.queueOnly then self:requestJoin(player) end
 	end)
 
 	for row = 1, 8 do
@@ -439,8 +441,8 @@ function MatchTable:requestJoin(player, options)
 	if not MODES[mode] then mode = "Classic" end
 	if not self.whitePlayerUserId and not self.blackPlayerUserId then
 		self.mode = mode
-		self.stakeAmount = math.max(0, math.floor(tonumber(options.stakeAmount) or 0))
-		self.challengeType = options.challengeType
+		self.stakeAmount = 0
+		self.challengeType = nil
 	end
 
 	local side
@@ -528,6 +530,9 @@ function MatchTable:_finish(reason, winner)
 	self:_transition("Finished")
 	self:_setPrompt(false)
 	self:_notifyBoth("MatchEnded", self:getPublicState())
+	if self.onFinish then
+		self.onFinish({tableId = self.tableId, white = self.whitePlayerUserId, black = self.blackPlayerUserId, winner = winner, reason = reason})
+	end
 	return true
 end
 
@@ -585,10 +590,12 @@ function MatchTable:clearFinished(player)
 	self:_transition("Idle")
 	self:_setPrompt(true)
 	if white then
+		self:_notifyOne(white, "LeftTable", self.tableId)
 		local p = Players:GetPlayerByUserId(white)
 		if p then self:_callLeave(p) end
 	end
 	if black then
+		self:_notifyOne(black, "LeftTable", self.tableId)
 		local p = Players:GetPlayerByUserId(black)
 		if p then self:_callLeave(p) end
 	end
@@ -682,11 +689,8 @@ function MatchTable:tryMove(player, toRow, toCol, promotion)
 	self:_notifyBoth("TableState", self:getPublicState())
 	self:_updateStatus()
 	if status.gameOver then
-		local reason = "stalemate"
-		if status.checkmate then reason = "checkmate"
-		elseif status.fiftyMove then reason = "fifty_move"
-		elseif status.threefold then reason = "threefold"
-		end
+		local reason = status.drawReason or "stalemate"
+		if status.checkmate then reason = "checkmate" end
 		self:_finish(reason, status.winner)
 	end
 	return true, status
@@ -702,6 +706,15 @@ end
 function MatchTable:deselect(player)
 	self:_clearSel(player.UserId)
 	return true
+end
+
+function MatchTable:claimDraw(player)
+	local side = self:_side(player.UserId)
+	if self.state ~= "Playing" or side ~= self.engineState.turn then return false end
+	local status = ChessEngine.status(self.engineState)
+	if status.canClaimThreefold then return self:_finish("threefold_claim", nil) end
+	if status.canClaimFiftyMove then return self:_finish("fifty_move_claim", nil) end
+	return false
 end
 
 return MatchTable
