@@ -146,13 +146,7 @@ local function begin()
 end
 local function showStart()
     clearChoices()
-    local holder=Instance.new("Frame")
-    holder.Name="BeginHolder"
-    holder.Size=UDim2.fromScale(.48,.44)
-    holder.BackgroundTransparency=1
-    holder.Parent=choicePanel
-    -- UIGridLayout will position the container.
-    button("START READING RACE",holder,begin)
+    button("START READING RACE",choicePanel,begin)
 end
 local best={}
 local function displayBook(book,note)
