@@ -1,45 +1,72 @@
-# YUGATNEO Roblox — Chess Arena + Weapons
+# YUGATNEO MATRIX — Story X Roblox
 
-Branch: `feature/full-chess-game`
+A development prototype that combines the world of **Сюжет Икс** with multiplayer chess, an explorable spiral highway, hover-kart driving, puzzle missions, and non-PvP target practice. **This branch has not yet been verified in Roblox Studio.**
 
-## Chess
+## Play loop
 
-1. `git switch feature/full-chess-game && git pull`
-2. `rojo serve default.project.json`
-3. Play in Studio → walk to **blue Join Pad** → hold **E**
-4. Second player joins → both press **I'M READY**
-5. Click piece → green legal squares → click destination
+1. Join the Matrix world at the central spawn. Explore the Memory Garden, Signal Maze, Observation Tower, and drone-training range.
+2. Use the green **Chess Dimension** portal on the spawn island. A long bridge connects the old city to the three-turn serpentine around the central chess hall.
+3. Choose **CASUAL** in the top-right HUD, or **TOURNEY** for a four-player knockout: two semifinals (tables 1/2) and a final (table 1).
+4. The server pairs players, assigns White/Black, positions them near the board, starts the game, and validates every move. On completion, spectators see the winner and the board resets after 12 seconds.
+5. Other visitors can **WATCH 1/2/3** from the HUD, explore the map, or join the waiting queue.
+6. Enter one of two **Serpentine Karts** near the access bridge and use W/S to accelerate/reverse and A/D to steer. The physical spiral has guardrails and an observation platform at its summit.
+7. Practice with **Pulse / Rapid / Charged** emitters against training drones. They cannot harm player characters. The earlier PvP WeaponSystem remains in the repository but is **not enabled** in the active Rojo mapping.
 
-Three tables at X = 0, +55, −55. Camera locks (Scriptable) during the match.
+## Chess features
 
-### Rules
-- Legal moves, check / checkmate / stalemate
-- Castling, en passant, promotion choice
-- **Fifty-move rule** (auto-draw at 100 half-moves without capture/pawn move)
-- **Threefold repetition** (auto-draw)
-- Resign, mutual draw offer, disconnect = technical loss
+- Three independent server-authoritative boards.
+- Turn order, king safety, check/checkmate, stalemate, castling, en passant, and promotion choice.
+- Additional draw handling in the imported rules engine: repetition, halfmove limits, insufficient material; claim via server-side action (HUD claim control still needs UX testing).
+- Resignations, consensual draw, and disconnect outcomes.
+- FIFO casual matchmaking, tournament registration, semifinals, final, and replay on drawn elimination games.
+- Session scoreboard and persistent **total wins** (not Elo): global top 10 uses Roblox OrderedDataStore. If Roblox API services are unavailable in Studio, session results still display. No virtual money, betting or paid stakes.
+- All match state, registration, and win awards are processed on the server.
 
-## Weapons (outside chess matches)
+**Tournament scope:** 4 participants, one bracket per game server, no tournament resumption after server restart, no cross-server matchmaking. Competitive tournament clocks, anti-stalling, appeals, formal ratings, audit logs, and persistence of tournament brackets are future work.
 
-| Key | Weapon | Damage | Range |
-|-----|--------|--------|-------|
-| 1 | Pistol | 18 | 180 |
-| 2 | Rifle | 28 | 320 |
-| 3 | SMG | 12 | 140 |
+## Matrix world
 
-Left mouse button fires. Shooting is **blocked** while `InChessMatch` is true (seated at a table).
+The procedural matrix city includes six Story X memory fragments and three reasoning terminals. Its themes are observation versus interpretation, the Other, Mira, the Right of Exit, and the unknown X. Shooting is harmless drone-target training; no player damage is enabled. The spiral is a geometry and physics prototype, not a production racing controller.
+
+## Run the feature branch
+
+Mac / Roblox Studio, assuming Rojo and the Rojo Studio plugin are installed:
+
+```sh
+git fetch origin
+git switch feature/story-x-spiral-chess-tournaments
+git pull
+rojo serve default.project.json
+```
+
+Connect the Rojo plugin in Roblox Studio and press **Play**. If another Rojo server is already using the default port, stop it first. `main` still contains the old chess prototype until this feature is tested and merged.
+
+Run **Test > Start** with at least **4 players** to verify the bracket. Test the chess board, promotion and draw scenarios separately; see `docs/MATRIX_TEST_PLAN.md`. For saved rankings, Roblox API services and a published test universe are required. Roblox recommends a separate testing universe rather than enabling Studio data store access for your live production game.
+
+## Important engineering notes
+
+- `default.project.json` activates only StoryXMatrixWorld, SpiralWorld, SpiralVehicles, ChessEngine, MatchTable, TournamentHub, Rankings, ChessArena, ChessControls, ChessCommunity and StoryXMatrixHUD.
+- The original standalone ChessArena and old standalone SpiralChessArena are **not** simultaneously active. The chess match engine and the Story X world were brought together from earlier GitHub feature branches.
+- The chess engine regression harness `tests/ChessEngineSmokeTest.lua` checks opening perft 20/400/8902 and draw-related cases. **Presence of a test is not a passed test**; Roblox Studio and multi-client verification remain outstanding.
+- `.github/workflows/roblox-ci.yml` builds a Roblox place for PRs targeting `main`. Publication remains a manual, separate workflow.
+- RemoteEvent inputs and seating are validated on the server; no client-supplied victory or leaderboard score is accepted.
+- Avoid taking third-party Roblox Toolbox models of unclear licensing or with embedded scripts into this project.
 
 ## Files
 
-- `src/server/ChessEngine.lua` — rules + draws
-- `src/server/MatchTable.lua` — one table
-- `src/server/ChessArena.server.lua` — 3 tables, membership
-- `src/server/WeaponSystem.server.lua` — loadout + raycast
-- `src/client/ChessControls.client.lua` — chess HUD + camera
-- `src/client/WeaponControls.client.lua` — weapon HUD
+- `src/server/SpiralWorld.server.lua` – procedural helix, guardrails, chess dimension portals.
+- `src/server/SpiralVehicles.server.lua` – two controllable recoverable hover-karts.
+- `src/server/ChessEngine.lua` – legal chess and terminal-state rules.
+- `src/server/MatchTable.lua` – per-table chess FSM and 3D rendering.
+- `src/server/TournamentHub.lua` – queue pairing and knockout bracket.
+- `src/server/Rankings.lua` – session wins and ordered persistent wins.
+- `src/server/ChessArena.server.lua` – server coordinator, registration pads, status board.
+- `src/server/StoryXMatrixWorld.server.lua` – puzzles, exploration, safe drones.
+- `src/client/ChessControls.client.lua`, `ChessCommunity.client.lua`, `StoryXMatrixHUD.client.lua` – game HUD.
 
-## Known limits
-
-- Piece models are procedural (improved silhouettes, not MeshId assets)
-- No wager / challenge modes yet
-- Not play-tested inside Studio from this environment
+### Reference architecture
+- Roblox Creator Hub: https://create.roblox.com/docs/scripting/security/client-server-boundary
+- Data stores: https://create.roblox.com/docs/cloud-services/data-stores
+- OrderedDataStore: https://create.roblox.com/docs/reference/engine/classes/OrderedDataStore
+- RemoteEvents: https://create.roblox.com/docs/scripting/events/remote
+- AlignOrientation: https://create.roblox.com/docs/reference/engine/classes/AlignOrientation
