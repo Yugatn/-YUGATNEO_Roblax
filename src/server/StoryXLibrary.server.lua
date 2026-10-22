@@ -143,7 +143,7 @@ local function shareLeaderboard()
         table.insert(lines,string.format("%d. %s / %s / %.1fs",i,entry.user,entry.bookId,entry.seconds))
     end
     if #records==0 then table.insert(lines,"Be the first to finish a story!") end
-    leaderText.Text=table.concat(lines,"\\n")
+    leaderText.Text=table.concat(lines,"\n")
 end
 local function persistNotes(player)
     if saving[player] then return end
