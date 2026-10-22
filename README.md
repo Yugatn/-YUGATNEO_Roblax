@@ -99,3 +99,17 @@ rojo serve default.project.json
 ```
 
 Join with at least four multiplayer Studio clients to test the reading races and existing chess tournament separately. Studio API data access must use a **separate test universe**, not a live datastore. The build workflow verifies place generation but does not substitute for multiplayer physics, UI and latency tests.
+
+
+## New: persistent virtual pet / «Тамагочи»
+
+Branch `feature/story-x-tamagotchi` adds a standalone **original virtual pet**, discoverable through interactive capsules near Matrix spawn and spiral step 64. The pet selection includes **Люми / Мико / Росток**. Returning players see a small collapsible pixel HUD showing hunger, happiness, energy, health and growth level. Four server-validated controls: feed, play, rest and care.
+
+- One free pet per player; no premium advantage, pressure-based streaks or push notifications.
+- No pet death, no loss of earned XP or irreversible penalty during offline absence; limited needs decay during the first simulated two hours only.
+- Roblox DataStore saves species, needs and XP between sessions where API services are available. When unavailable the game runs session-only and displays a warning.
+- Rojo modules: `src/server/PetRules.lua`, `src/server/PetWorld.server.lua`, `src/client/VirtualPet.client.lua`.
+- **Manual instructions and QA:** [VIRTUAL_PET_IMPLEMENTATION_RU.md](docs/VIRTUAL_PET_IMPLEMENTATION_RU.md); [smoke-test harness](tests/PetRulesSmokeTest.lua).
+- This branch is a **source-code implementation, not a validated published game.** Roblox Studio multiplayer/UI and real DataStore tests are still required.
+
+To test: switch to `feature/story-x-tamagotchi`, run `rojo serve default.project.json`, connect Studio and press Play. Use a separate test universe for DataStore tests.

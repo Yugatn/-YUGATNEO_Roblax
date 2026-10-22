@@ -51,6 +51,12 @@
       },
       "RetroArcade": {
         "$path": "src/server/RetroArcade.server.lua"
+      },
+      "PetRules": {
+        "$path": "src/server/PetRules.lua"
+      },
+      "PetWorld": {
+        "$path": "src/server/PetWorld.server.lua"
       }
     },
     "StarterPlayer": {
@@ -77,6 +83,9 @@
         },
         "RetroArcade": {
           "$path": "src/client/RetroArcade.client.lua"
+        },
+        "VirtualPet": {
+          "$path": "src/client/VirtualPet.client.lua"
         }
       }
     }
