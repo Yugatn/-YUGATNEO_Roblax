@@ -45,6 +45,9 @@
       },
       "RetroEngine": {
         "$path": "src/server/RetroEngine.lua"
+      },
+      "RetroCabinet": {
+        "$path": "src/server/RetroCabinet.server.lua"
       }
     },
     "StarterPlayer": {
@@ -65,6 +68,9 @@
         },
         "CognitiveArcade": {
           "$path": "src/client/CognitiveArcade.client.lua"
+        },
+        "RetroCabinet": {
+          "$path": "src/client/RetroCabinet.client.lua"
         }
       }
     }
