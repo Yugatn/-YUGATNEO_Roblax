@@ -1,5 +1,5 @@
 {
-  "name": "YUGATNEO_Roblox",
+  "name": "YUGATNEO_MATRIX_STORY_X",
   "tree": {
     "$className": "DataModel",
     "ServerScriptService": {
@@ -10,11 +10,23 @@
       "MatchTable": {
         "$path": "src/server/MatchTable.lua"
       },
+      "TournamentHub": {
+        "$path": "src/server/TournamentHub.lua"
+      },
+      "Rankings": {
+        "$path": "src/server/Rankings.lua"
+      },
       "ChessArena": {
         "$path": "src/server/ChessArena.server.lua"
       },
-      "WeaponSystem": {
-        "$path": "src/server/WeaponSystem.server.lua"
+      "StoryXMatrixWorld": {
+        "$path": "src/server/StoryXMatrixWorld.server.lua"
+      },
+      "SpiralWorld": {
+        "$path": "src/server/SpiralWorld.server.lua"
+      },
+      "SpiralVehicles": {
+        "$path": "src/server/SpiralVehicles.server.lua"
       }
     },
     "StarterPlayer": {
@@ -24,8 +36,11 @@
         "ChessControls": {
           "$path": "src/client/ChessControls.client.lua"
         },
-        "WeaponControls": {
-          "$path": "src/client/WeaponControls.client.lua"
+        "ChessCommunity": {
+          "$path": "src/client/ChessCommunity.client.lua"
+        },
+        "StoryXMatrixHUD": {
+          "$path": "src/client/StoryXMatrixHUD.client.lua"
         }
       }
     }
