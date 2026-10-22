@@ -29,6 +29,7 @@ local noticeEvent = getRemote("StoryXNotice")
 local puzzleEvent = getRemote("StoryXPuzzle")
 local answerEvent = getRemote("StoryXAnswer")
 local pulseEvent = getRemote("StoryXPulse")
+local modeEvent = getRemote("StoryXPulseMode")
 local progressEvent = getRemote("StoryXProgress")
 
 local CYAN = Color3.fromRGB(0, 255, 210)
@@ -278,10 +279,21 @@ for i = 1, 6 do
 end
 
 local lastShot: {[Player]: number} = {}
+local pulseMode = {}
+local modes = {
+    Pulse = {damage = 1, cooldown = 0.35, range = 180},
+    Rapid = {damage = 1, cooldown = 0.17, range = 145},
+    Charged = {damage = 3, cooldown = 1.1, range = 220},
+}
+modeEvent.OnServerEvent:Connect(function(player, selected)
+    if typeof(selected) == "string" and modes[selected] then pulseMode[player] = selected end
+end)
 pulseEvent.OnServerEvent:Connect(function(player: Player, direction: any)
 	if typeof(direction) ~= "Vector3" or direction.Magnitude < 0.8 or direction.Magnitude > 1.2 then return end
+	if player:GetAttribute("InChessMatch") then return end
 	local now = os.clock()
-	if now - (lastShot[player] or 0) < 0.35 then return end
+	local config = modes[pulseMode[player] or "Pulse"]
+	if now - (lastShot[player] or -100) < config.cooldown then return end
 	lastShot[player] = now
 	local character = player.Character
 	local root = character and character:FindFirstChild("HumanoidRootPart")
@@ -291,14 +303,14 @@ pulseEvent.OnServerEvent:Connect(function(player: Player, direction: any)
 	rayParams.FilterType = Enum.RaycastFilterType.Exclude
 	rayParams.FilterDescendantsInstances = {character}
 	rayParams.IgnoreWater = true
-	local result = workspace:Raycast(origin, direction.Unit * 180, rayParams)
-	local endpoint = result and result.Position or (origin + direction.Unit * 180)
+	local result = workspace:Raycast(origin, direction.Unit * config.range, rayParams)
+	local endpoint = result and result.Position or (origin + direction.Unit * config.range)
 	local beam = part(world, "PulseBeam", Vector3.new(0.16, 0.16, (endpoint-origin).Magnitude), CFrame.lookAt((origin+endpoint)/2, endpoint), CYAN, Enum.Material.Neon, 0.05, false)
 	Debris:AddItem(beam, 0.12)
 	if result then
 		local hitModel = result.Instance:FindFirstAncestorOfClass("Model")
 		if hitModel and hitModel.Parent == droneFolder then
-			local health = (hitModel:GetAttribute("DroneHealth") or 3) - 1
+			local health = (hitModel:GetAttribute("DroneHealth") or 3) - config.damage
 			hitModel:SetAttribute("DroneHealth", health)
 			local core = hitModel.PrimaryPart
 			if core then
@@ -344,6 +356,7 @@ end)
 Players.PlayerRemoving:Connect(function(player)
 	playerState[player] = nil
 	lastShot[player] = nil
+	pulseMode[player] = nil
 end)
 
 for _, player in ipairs(Players:GetPlayers()) do
