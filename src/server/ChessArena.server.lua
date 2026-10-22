@@ -4,6 +4,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local MatchTable = require(script.Parent:WaitForChild("MatchTable"))
 local TournamentHub = require(script.Parent:WaitForChild("TournamentHub"))
 local Rankings = require(script.Parent:WaitForChild("Rankings"))
+local Rewards = require(script.Parent:WaitForChild("RewardService"))
 
 for _, item in ipairs(workspace:GetChildren()) do
     if item.Name:match("^Table_") then item:Destroy() end
@@ -94,7 +95,12 @@ for _, conf in ipairs({
         onLeave = function(p) assign(p, nil) end,
         onFinish = function(result)
             task.defer(function()
-                if hub then Rankings.awardWinner(hub:finished(result)) end
+                if hub then
+                    local winnerId=hub:finished(result)
+                    Rankings.awardWinner(winnerId)
+                    local winner=winnerId and Players:GetPlayerByUserId(winnerId)
+                    if winner then Rewards.awardMatch(winner,"chess_win",10) end
+                end
                 publish()
             end)
         end,
