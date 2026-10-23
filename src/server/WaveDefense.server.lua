@@ -287,6 +287,13 @@ local lastHudUpdate=0
 RunService.Heartbeat:Connect(function(dt)
  accumulator+=dt;if accumulator<0.13 then return end
  dt=accumulator;accumulator=0
+ local now=os.clock()
+ if now-lastHudUpdate>=1 then
+  lastHudUpdate=now
+  for _,arena in pairs(arenas) do
+   if arena.phase=="Playing" then update(arena) end
+  end
+ end
  for _,a in pairs(arenas) do
   if a.phase=="Playing" then
    local living={}
