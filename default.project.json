@@ -75,6 +75,12 @@
       },
       "InfectionTag": {
         "$path": "src/server/InfectionTag.server.lua"
+      },
+      "DefenseTactics": {
+        "$path": "src/server/DefenseTactics.lua"
+      },
+      "DefenseNavigation": {
+        "$path": "src/server/DefenseNavigation.lua"
       }
     },
     "StarterPlayer": {

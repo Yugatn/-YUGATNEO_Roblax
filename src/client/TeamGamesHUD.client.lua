@@ -64,23 +64,33 @@ local function showDefense(s)
  lastMode=s.mode
  panel.Visible=true
  title.Text=s.mode=="METAL_SENTINELS" and "DEFENSE / METAL SENTINELS" or "DEFENSE / SHADOW SWARM"
- status.Text="Stage: "..s.phase.."  •  "..s.round.."/"..s.rounds..
-  " waves  •  Core: "..math.max(0,s.core).." / 150"
+ status.Text="Stage: "..s.phase.." • "..s.round.."/"..s.rounds..
+  " waves  •  Core: "..math.max(0,s.core)..
+  "\nPlan: "..tostring(s.plan or "Balanced")..
+  " • Shared salvage: "..tostring(s.salvage or 0)
  local me,roles=nil,{}
  for _,m in ipairs(s.roster or {}) do
   if m.id==player.UserId then me=m end
   table.insert(roles,m.name..": "..m.role)
  end
- detail.Text="My role: "..(me and me.role or "Spectator")..
-  "  •  Charges: "..(me and me.ammo or 0).."\nEnemies: "..
-  tostring(s.enemyCount or 0).."  •  Team: "..#roles
+ local intact=0
+ for _,site in ipairs(s.sites or {}) do
+  if site.level and site.level>0 and site.health and site.health>0 then intact+=1 end
+ end
+ detail.Text="Role: "..(me and me.role or "Spectator")..
+  " • Charges: "..(me and me.ammo or 0)..
+  "\nBots: "..tostring(s.enemyCount or 0)..
+  " • Team: "..#roles.." • Barriers: "..intact.."/4"
  tips.Text=(s.message and s.message~="" and s.message.."\n" or "")..
-  "Click/tap robot targets to fire. Engineer repairs core; Support reloads at stations."
+  (s.objective or "Coordinate team tasks and craft cover on pads.")
  action.Visible=s.phase=="Lobby"
 end
 defense.OnClientEvent:Connect(function(kind,details)
  if kind=="DefenseState" then showDefense(details)
- elseif kind=="DefenseExited" then panel.Visible=false;lastMode=nil end
+ elseif kind=="DefenseExited" then panel.Visible=false;lastMode=nil
+ elseif kind=="DefenseHint" and details then
+  tips.Text=tostring(details.message or "Недоступно")
+ end
 end)
 local function showTag(s)
  lastMode="ZOMBIE_TAG"

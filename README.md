@@ -130,3 +130,18 @@ Server scripts are Rojo-mapped and use `WorldRewards` for in-experience progress
 - **[Manual assembly, exact game rules, and test plan](docs/TEAM_DIMENSIONS_RU.md)**
 - **[Module-only test harness](tests/TeamGamesSmokeTest.lua)** — not executed yet.
 - All new dimensions have original names and assets; they do not distribute the copyrighted contents of *TRON*, *Terminator*, *Dune*, *Assassin's Creed*, or commercial retro games.
+
+
+## Co-op defense: voting, salvage crafting and navigation
+
+The `feature/story-x-defense-tactics-crafting` branch extends both wave-defense dimensions with **team-selected tactical plans** (`Fortify`, `Scout`, `Resupply`), a shared salvage resource, four fixed construction pads per arena, repairable/upgradable barricades, and a bounded asynchronous Roblox PathfindingService adapter for bot routing.
+
+- Salvage starts at 15, increases by 3 per defeated target and 8 per cleared wave (maximum 250).
+- Build / Repair / Upgrade costs 9 / 4 / 15 salvage. Engineer gains a 2-salvage discount and stronger repair.
+- Robots target the core or an intact barrier along their approach. Destroyed barriers can be repaired. Core health and construction resources are always changed by the server.
+- Voting occurs in the lobby and sets the plan once per match; ties default to Balanced.
+- The existing team HUD shows the selected plan, common materials, number of intact barricades and a dynamic cooperation objective.
+
+**Status:** source code implemented; Studio navigation, mobile interaction, balancing and multiplayer validation pending. The module smoke test has been authored but not run in Roblox Studio. See [full manual build and test guide](docs/DEFENSE_TACTICS_IMPLEMENTATION_RU.md) and [tactics smoke tests](tests/DefenseTacticsSmokeTest.lua).
+
+Use `git switch feature/story-x-defense-tactics-crafting`, `rojo serve default.project.json` and connect Roblox Studio Rojo plugin. Feature-branch builds are now included in GitHub Actions triggers, with publication still manual.
