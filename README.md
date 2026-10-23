@@ -145,3 +145,17 @@ The `feature/story-x-defense-tactics-crafting` branch extends both wave-defense 
 **Status:** source code implemented; Studio navigation, mobile interaction, balancing and multiplayer validation pending. The module smoke test has been authored but not run in Roblox Studio. See [full manual build and test guide](docs/DEFENSE_TACTICS_IMPLEMENTATION_RU.md) and [tactics smoke tests](tests/DefenseTacticsSmokeTest.lua).
 
 Use `git switch feature/story-x-defense-tactics-crafting`, `rojo serve default.project.json` and connect Roblox Studio Rojo plugin. Feature-branch builds are now included in GitHub Actions triggers, with publication still manual.
+
+
+## STORY X / Narrative Art Gallery (feature branch)
+
+An interactive author-led museum opens at **spiral step 76**. Find the light terminal directly on the helix road (or the adjacent balcony). The player enters a dedicated gallery with eight original story exhibits: Observer, Mira, Symbiont, 2300 Diary, Ambivalent Solipsism, Cinema Catharsis, Spiral of Time, and Synthesis X. The room contains procedurally rendered pixel paintings, read-to-explore plaques, short story interpretations and **server-validated comprehension puzzles**. Portals lead back to the spiral, Matrix spawn, Library X or the Chess dimension.
+
+- `src/server/StoryXGalleryCatalog.lua` — curated excerpts and private quiz answers
+- `src/server/StoryXGalleryAssets.lua` — explicit approval/license registry for artwork
+- `src/server/StoryXGalleryWorld.server.lua` — room geometry, visitor prompts, narrative puzzle validation
+- `src/client/StoryXGallery.client.lua` — responsive reading, exhibition catalog and answer controls
+- `tests/StoryXGallerySmokeTest.lua`, `tests/StoryXGallerySceneDiagnostics.server.lua` — to be executed in Roblox Studio
+- [Detailed manual build guide, author art import and acceptance checklist](docs/STORY_X_GALLERY_IMPLEMENTATION_RU.md)
+
+**Important:** Gallery paintings are original in-engine **pixel placeholders**, not the previously generated Story X illustrations. To use those artworks, upload the actual image files to Roblox under an account with permission, then record a reviewed numeric asset ID in `StoryXGalleryAssets.lua`. Gallery exploration progress is currently **session-only**; no rewards can be farmed or real-world trading occurs. Gameplay has not yet been independently validated in Roblox Studio.
