@@ -175,6 +175,21 @@ for i,exhibit in ipairs(Catalog.exhibits) do
   state(p)
  end)
 end
+-- Personal atlas: inspection is read-only, server does not leak quiz answers.
+local atlas=part("StoryXAtlasTerminal",Vector3.new(6,4,5),
+ CFrame.new(center+Vector3.new(0,3,18)),gold,true,Enum.Material.Neon)
+sign(atlas,"АТЛАС X / 10 ГЛАВ",gold)
+prompt(atlas,"Открыть атлас","Исследованные экспозиции",function(p)
+ if not nearby(p,atlas.Position,16) then return end
+ local entries={}
+ for _,exhibit in ipairs(Catalog.exhibits) do
+  table.insert(entries,Catalog.public(exhibit))
+ end
+ event:FireClient(p,"Atlas",{
+  entries=entries,seen=seen[p] or {},solved=solved[p] or {},
+ })
+ state(p)
+end)
 local function exitPost(name,offset,title,position)
  local p=part(name,Vector3.new(7,4,5),CFrame.new(center+offset),violet)
  sign(p,title,cyan)
