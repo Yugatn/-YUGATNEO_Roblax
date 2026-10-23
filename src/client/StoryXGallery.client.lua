@@ -66,11 +66,14 @@ local function button(txt,callback)
  return b
 end
 local current
+local progressLabel
+local answerLabel
 local score={completed=0,total=10,solved={},seen={}}
 local function show(exhibit)
  current=exhibit
  shell.Visible=true
  clear()
+ progressLabel=nil;answerLabel=nil
  head.Text="ГАЛЕРЕЯ X / "..exhibit.title
  paragraph("ГЛАВА: "..exhibit.chapter,54,15)
  if exhibit.imageAsset and exhibit.imageAsset>0 then
@@ -95,7 +98,8 @@ local function show(exhibit)
   end)
  end
  paragraph("Ответ проверяется сервером. Экспозиция доступна без обязательного прохождения.",75,13)
- paragraph("Исследовано: "..tostring(score.completed).."/"..tostring(score.total),36,14)
+ answerLabel=paragraph("",46,15)
+ progressLabel=paragraph("Исследовано: "..tostring(score.completed).."/"..tostring(score.total),56,14)
  scroll.CanvasPosition=Vector2.zero
 end
 remote.OnClientEvent:Connect(function(action,payload)
@@ -103,11 +107,15 @@ remote.OnClientEvent:Connect(function(action,payload)
   show(payload)
  elseif action=="Progress" then
   score=payload or score
+  if progressLabel then
+   progressLabel.Text="Исследовано: "..tostring(score.completed).."/"..tostring(score.total)..
+    (score.persistent and " • прогресс сохраняется" or " • сохранение недоступно")
+  end
  elseif action=="AnswerResult" then
-  if current and payload.id==current.id then
-   local correct=payload.correct
-   paragraph(correct and "✓ Ответ принят! Исследование экспоната завершено." or
-    "Пока неверно. Вернись к тексту и попробуй снова.",72,15)
+  if current and payload.id==current.id and answerLabel then
+   answerLabel.Text=payload.correct and
+    "✓ Ответ принят! Экспонат изучен." or
+    "Пока неверно. Проверь сюжетную карточку ещё раз."
   end
  elseif action=="Notice" then
   shell.Visible=true
