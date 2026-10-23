@@ -287,6 +287,7 @@ local function unobstructed(chaser,runner,from,to)
  return result==nil
 end
 local accumulator=0
+local lastHudUpdate=0
 RunService.Heartbeat:Connect(function(dt)
  accumulator+=dt
  if accumulator<0.15 then return end
