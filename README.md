@@ -113,3 +113,20 @@ Branch `feature/story-x-tamagotchi` adds a standalone **original virtual pet**, 
 - This branch is a **source-code implementation, not a validated published game.** Roblox Studio multiplayer/UI and real DataStore tests are still required.
 
 To test: switch to `feature/story-x-tamagotchi`, run `rojo serve default.project.json`, connect Studio and press Play. Use a separate test universe for DataStore tests.
+
+
+## New dimensions: light-cycle racing, cooperative waves and zombie tag
+
+This branch adds **LUMEN CIRCUIT**, an original cyber-neon grid racing game with interactive laser entry on spiral step 82, 1–6 server-controlled lightbikes, persistent tracks within each round, server-validated 90° turns and wall/trail collisions. HUD supports keyboard and phone controls. See `src/server/LightCycleEngine.lua`, `src/server/NeonGridWorld.server.lua`, `src/client/LightCycleHUD.client.lua`.
+
+Two tactical cooperative dimensions now have first-source-code implementations:
+- **METAL SENTINELS** (spiral step 107): 1–3 players versus waves of original non-human machine targets, choosing defender, engineer or support roles, repairing a central base, supplying energy and surviving 10 or 20 rounds.
+- **SHADOW SWARM** (spiral step 123): the same original co-op mechanics applied to fantasy shadow creatures, without graphic violence or player-versus-player attacks.
+
+**ZOMBIE TAG** (spiral step 140) is a separate non-damaging, hide-and-seek/chase world. One randomly assigned catcher can convert others only after three continuous seconds nearby with unobstructed line-of-sight; newly tagged players join the catchers. There are climbable trees, multi-level hide houses and static cars to hide in. Published rounds can last 30 or 60 minutes, with a shorter Studio-only test duration; when one/two final runners remain, a short final escape determines survival.
+
+Server scripts are Rojo-mapped and use `WorldRewards` for in-experience progress. Competitive bots use simplified movement toward the core: they **do not yet** implement full PathfindingService tactics. All scripts remain **untested in Roblox Studio**, with device/multiplayer/physics checks required before release.
+
+- **[Manual assembly, exact game rules, and test plan](docs/TEAM_DIMENSIONS_RU.md)**
+- **[Module-only test harness](tests/TeamGamesSmokeTest.lua)** — not executed yet.
+- All new dimensions have original names and assets; they do not distribute the copyrighted contents of *TRON*, *Terminator*, *Dune*, *Assassin's Creed*, or commercial retro games.

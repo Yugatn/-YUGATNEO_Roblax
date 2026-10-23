@@ -57,6 +57,24 @@
       },
       "PetWorld": {
         "$path": "src/server/PetWorld.server.lua"
+      },
+      "LightCycleEngine": {
+        "$path": "src/server/LightCycleEngine.lua"
+      },
+      "NeonGridWorld": {
+        "$path": "src/server/NeonGridWorld.server.lua"
+      },
+      "DefenseRules": {
+        "$path": "src/server/DefenseRules.lua"
+      },
+      "WaveDefense": {
+        "$path": "src/server/WaveDefense.server.lua"
+      },
+      "InfectionRules": {
+        "$path": "src/server/InfectionRules.lua"
+      },
+      "InfectionTag": {
+        "$path": "src/server/InfectionTag.server.lua"
       }
     },
     "StarterPlayer": {
@@ -86,6 +104,12 @@
         },
         "VirtualPet": {
           "$path": "src/client/VirtualPet.client.lua"
+        },
+        "LightCycleHUD": {
+          "$path": "src/client/LightCycleHUD.client.lua"
+        },
+        "TeamGamesHUD": {
+          "$path": "src/client/TeamGamesHUD.client.lua"
         }
       }
     }
