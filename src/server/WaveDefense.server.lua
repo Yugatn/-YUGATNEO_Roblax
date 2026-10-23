@@ -421,17 +421,36 @@ RunService.Heartbeat:Connect(function(dt)
    local living={}
    for _,bot in ipairs(a.enemies) do
     if bot.health>0 and bot.model.Parent then
-     local d=a.corePos-bot.position
-     local distance=d.Magnitude
-     if distance>9 then
-      local step=math.min(distance-8,bot.speed*dt)
-      bot.position+=d.Unit*step
-      bot.model:PivotTo(CFrame.lookAt(bot.position,Vector3.new(a.corePos.X,bot.position.Y,a.corePos.Z)))
-     else
-      local now=os.clock()
-      if now-bot.lastAttack>=1.8 then
-       bot.lastAttack=now
-       a.coreHealth-=a.kind=="Robots" and 8 or 6
+     -- Route around existing ruins and new barricades. When navigation
+     -- is unavailable, the agent heads toward its goal without yielding.
+     local selected=Tactics.intercept(bot.position,a.corePos,a.barricades)
+     local site=selected and a.barricades[selected] or nil
+     local goal=site and site.position or a.corePos
+     local goalOnFloor=Vector3.new(goal.X,a.origin.Y+3,goal.Z)
+     local waypoint=Navigation.direction(bot,goalOnFloor,now)
+     local delta=Vector3.new(waypoint.X-bot.position.X,0,waypoint.Z-bot.position.Z)
+     local toGoal=Vector3.new(goal.X-bot.position.X,0,goal.Z-bot.position.Z)
+     local limit=site and 6 or 9
+     if toGoal.Magnitude>limit then
+      if delta.Magnitude>0.1 then
+       local step=math.min(bot.speed*dt,delta.Magnitude,toGoal.Magnitude-limit)
+       if step>0 then
+        bot.position+=delta.Unit*step
+        bot.model:PivotTo(CFrame.lookAt(bot.position,
+         bot.position+delta.Unit*8))
+       end
+      end
+     elseif now-bot.lastAttack>=1.8 then
+      bot.lastAttack=now
+      if site and site.health>0 then
+       site.health=math.max(0,site.health-(a.kind=="Robots" and 13 or 9))
+       if site.health==0 then
+        site.blocker.CanCollide=false
+        site.blocker.Transparency=1
+       end
+      else
+       a.coreHealth-=Tactics.coreAttackDamage(
+        a.kind=="Robots" and 8 or 6,a.plan)
       end
      end
      table.insert(living,bot)
