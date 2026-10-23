@@ -86,18 +86,18 @@ function T.intercept(botPos,corePos,sites)
 end
 
 function T.objective(core,sites,members,salvage)
-  if core<80 then return "Protect the base: engineer repairs the core" end
+  if core<80 then return "Срочно укрепите ядро: нужен инженер" end
   local built=0
   for _,site in ipairs(sites) do
     if site.level>0 and site.health>0 then built+=1 end
   end
   if built<2 and salvage>=7 then
-    return "Use team salvage to construct protective barricades"
+    return "Постройте укрепления из общих деталей команды"
   end
   for _,member in ipairs(members) do
-    if member.ammo<12 then return "Support teammates: replenish energy charges" end
+    if member.ammo<12 then return "Снабженец, пополни заряды товарищам" end
   end
-  return "Coordinate lanes: defender covers, engineer repairs, support resupplies"
+  return "Разделите задачи: защита, ремонт, снабжение"
 end
 
 function T.coreAttackDamage(baseDamage,plan)
