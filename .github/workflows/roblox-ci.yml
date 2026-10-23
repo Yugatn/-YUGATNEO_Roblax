@@ -23,6 +23,8 @@ jobs:
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
+      - name: Validate Story X module wiring
+        run: python3 tools/validate_storyx_project.py
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
       - name: Install Rojo CLI
