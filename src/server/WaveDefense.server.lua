@@ -279,6 +279,70 @@ local function makeArena(id,kind,origin,spiralStep)
   end
   update(a,"Команда получила новые энергетические заряды")
  end)
+ -- Four fixed build pads avoid unbounded user-placed structures.
+ -- Use nearby ProximityPrompts: build, upgrade or repair based on state.
+ local locations={
+  Vector3.new(0,3,-22),Vector3.new(0,3,22),
+  Vector3.new(-22,3,0),Vector3.new(22,3,0),
+ }
+ for i,offset in ipairs(locations) do
+  local pos=origin+offset
+  local pad=block(f,"CraftPad_"..i,Vector3.new(8,0.6,8),
+   CFrame.new(pos+Vector3.new(0,-2,0)),Color3.fromRGB(79,108,115),true)
+  local widthAlongX=i<=2
+  local sz=widthAlongX and Vector3.new(13,7,2.2) or Vector3.new(2.2,7,13)
+  local blocker=block(f,"Barricade_"..i,sz,CFrame.new(pos+Vector3.new(0,2.2,0)),
+   Color3.fromRGB(45,190,173),false,Enum.Material.Neon)
+  blocker.Transparency=1
+  local site={position=pos,blocker=blocker,level=0,health=0,maxHealth=0,
+   lastInteraction={}}
+  a.barricades[i]=site
+  banner(pad,"CRAFT / UPGRADE / REPAIR")
+  makePrompt(pad,"Крафт укрепления","Командная мастерская",function(p)
+   local member=a.members[p.UserId]
+   if a.phase~="Playing" or not member or not inRange(p,pad.Position,14) then return end
+   local now=os.clock()
+   if now-(site.lastInteraction[p.UserId] or -100)<1.2 then return end
+   site.lastInteraction[p.UserId]=now
+   local action
+   if site.level==0 then action="Build"
+   elseif site.level==1 and site.health>site.maxHealth*0.5 then action="Upgrade"
+   else action="Repair" end
+   local success,newSalvage,reason=Tactics.apply(action,member.role,site,a.salvage)
+   if success then
+    a.salvage=newSalvage
+    member.crafts=(member.crafts or 0)+1
+    site.blocker.CanCollide=site.health>0
+    site.blocker.Transparency=site.health>0 and (site.level==2 and 0.08 or 0.22) or 1
+    site.blocker.Color=site.level==2 and Color3.fromRGB(92,233,221)
+     or Color3.fromRGB(45,190,173)
+    update(a,member.name.." улучшает укрытия: "..action)
+   else
+    event:FireClient(p,"DefenseHint",{message="Недоступно: "..reason})
+   end
+  end)
+ end
+ -- Lobby plan board; players independently vote before the leader starts waves.
+ for i,setting in ipairs({
+  {name="Fortify",label="ОБОРОНА / МЕНЬШЕ УРОНА ЯДРУ"},
+  {name="Scout",label="РАЗВЕДКА / СИЛЬНЕЕ ВЫСТРЕЛЫ"},
+  {name="Resupply",label="ЛОГИСТИКА / БОЛЬШЕ ЗАРЯДОВ"},
+ }) do
+  local terminal=block(f,"PlanVote_"..setting.name,Vector3.new(8,4,5),
+   CFrame.new(origin+Vector3.new(-25+(i-1)*25,3,-32)),
+   Color3.fromRGB(76,93,175),true)
+  banner(terminal,setting.label)
+  makePrompt(terminal,"Голосовать","План команды",function(p)
+   if a.phase~="Lobby" or not a.members[p.UserId]
+      or not inRange(p,terminal.Position,16) then return end
+   if Tactics.vote(a.votes,p.UserId,setting.name) then
+    local teamIds={}
+    for uid in pairs(a.members) do table.insert(teamIds,uid) end
+    a.plan=Tactics.teamPlan(a.votes,teamIds)
+    update(a,"Обсудите тактику перед началом волны")
+   end
+  end)
+ end
  if a.kind=="Shadows" then
   -- Two elevated walkways and ladders for optional upper-level cooperation.
   for side=-1,1,2 do
