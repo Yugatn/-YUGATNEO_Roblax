@@ -159,9 +159,36 @@ local function show(exhibit)
  progressLabel=paragraph("Исследовано: "..tostring(score.completed).."/"..tostring(score.total),56,14)
  scroll.CanvasPosition=Vector2.zero
 end
+local function showAtlas(index)
+ current=nil
+ shell.Visible=true
+ clear()
+ progressLabel=nil;answerLabel=nil
+ head.Text="АТЛАС X / ИСТОРИИ"
+ paragraph("ЛИЧНЫЙ АТЛАС • без таймера и обязательных ответов",58,16)
+ for n,entry in ipairs(index.entries or {}) do
+  local isSeen=index.seen and index.seen[entry.id]
+  local isSolved=index.solved and index.solved[entry.id]
+  local state=isSolved and "● Изучено" or (isSeen and "○ Просмотрено" or "◇ Не открыто")
+  button(n..". "..entry.title.." • "..state,function()
+   clear()
+   head.Text="АТЛАС X / "..entry.title
+   paragraph(entry.chapter,50,16)
+   paragraph(entry.caption,110,16)
+   paragraph(entry.story,180,15)
+   paragraph("Для ответов на вопросы подойди к картине в зале. "..
+    "Все материалы доступны без экзамена.",100,13)
+   button("← К АТЛАСУ",function()showAtlas(index)end)
+   scroll.CanvasPosition=Vector2.zero
+  end)
+ end
+ scroll.CanvasPosition=Vector2.zero
+end
 remote.OnClientEvent:Connect(function(action,payload)
  if action=="Exhibit" then
   show(payload)
+ elseif action=="Atlas" then
+  showAtlas(payload)
  elseif action=="Progress" then
   score=payload or score
   if progressLabel then
