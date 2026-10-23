@@ -64,6 +64,7 @@ local function update(a,message)
   table.insert(payload.sites,{id=i,level=site.level,
    health=math.floor(site.health),maxHealth=site.maxHealth})
  end
+ payload.objective=Tactics.objective(a.coreHealth,a.barricades,payload.roster,a.salvage)
  for uid in pairs(a.members) do
   local p=Players:GetPlayerByUserId(uid)
   if p then event:FireClient(p,"DefenseState",payload) end
