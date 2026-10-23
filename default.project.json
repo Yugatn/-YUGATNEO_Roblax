@@ -81,6 +81,12 @@
       },
       "DefenseNavigation": {
         "$path": "src/server/DefenseNavigation.lua"
+      },
+      "StoryXGalleryCatalog": {
+        "$path": "src/server/StoryXGalleryCatalog.lua"
+      },
+      "StoryXGallery": {
+        "$path": "src/server/StoryXGallery.server.lua"
       }
     },
     "StarterPlayer": {
@@ -116,6 +122,9 @@
         },
         "TeamGamesHUD": {
           "$path": "src/client/TeamGamesHUD.client.lua"
+        },
+        "StoryXGallery": {
+          "$path": "src/client/StoryXGallery.client.lua"
         }
       }
     }
