@@ -82,10 +82,10 @@ local function show(exhibit)
  else
   paragraph("◈  Голографическая визуализация находится в выставочном зале. ◈",56,14)
  end
- paragraph(exhibit.caption,math.max(95,math.ceil(utf8.len(exhibit.caption) or #exhibit.caption)/54)*29),17)
- paragraph(exhibit.story,math.max(154,math.ceil(utf8.len(exhibit.story) or #exhibit.story)/54)*29),16)
+ paragraph(exhibit.caption,math.max(95,math.ceil((utf8.len(exhibit.caption) or #exhibit.caption)/54)*29),17)
+ paragraph(exhibit.story,math.max(154,math.ceil((utf8.len(exhibit.story) or #exhibit.story)/54)*29),16)
  paragraph("ВОПРОС ДЛЯ ИССЛЕДОВАТЕЛЯ",36,17)
- paragraph(exhibit.question,math.max(68,math.ceil(utf8.len(exhibit.question) or #exhibit.question)/54)*28),15)
+ paragraph(exhibit.question,math.max(68,math.ceil((utf8.len(exhibit.question) or #exhibit.question)/54)*28),15)
  for i,option in ipairs(exhibit.options) do
   local answer=i
   button(i..". "..option,function()
