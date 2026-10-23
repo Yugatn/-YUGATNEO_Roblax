@@ -157,7 +157,7 @@ event.OnServerEvent:Connect(function(p,action,id,answer)
  end
 end)
 local function save(p)
- if not persisted[p] or saving[p] then return end
+ if not persisted[p] or saving[p] then return false end
  saving[p]=true
  local seenSnapshot={}
  local solvedSnapshot={}
@@ -175,6 +175,17 @@ local function save(p)
  end)
  saving[p]=nil
  if not ok then warn("[Story X Gallery] Save failed:",err) end
+ return ok
+end
+local function flush(p)
+ local deadline=os.clock()+8
+ while saving[p] and os.clock()<deadline do task.wait(0.1) end
+ if saving[p] then warn("[Story X Gallery] Pending save timed out",p.UserId);return end
+ local success=save(p)
+ if success==false and persisted[p] then
+  task.wait(0.4)
+  save(p)
+ end
 end
 Players.PlayerAdded:Connect(function(p)
  seen[p]={};solved[p]={}
@@ -192,7 +203,7 @@ Players.PlayerAdded:Connect(function(p)
  end)
 end)
 Players.PlayerRemoving:Connect(function(p)
- save(p)
+ flush(p)
  focused[p]=nil;lastAction[p]=nil;seen[p]=nil;solved[p]=nil
  persisted[p]=nil;saving[p]=nil
 end)
@@ -217,6 +228,6 @@ task.spawn(function()
  end
 end)
 game:BindToClose(function()
- for _,p in ipairs(Players:GetPlayers()) do save(p) end
+ for _,p in ipairs(Players:GetPlayers()) do flush(p) end
 end)
 print("[STORY X] Ten interactive gallery scenes and chapter quizzes loaded.")
