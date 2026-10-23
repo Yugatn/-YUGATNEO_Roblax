@@ -103,7 +103,8 @@ marker.OutlineColor=Color3.fromRGB(248,211,92)
 marker.FillColor=Color3.fromRGB(93,251,219)
 marker.DepthMode=Enum.HighlightDepthMode.Occluded
 marker.Enabled=false
-marker.Parent=gui
+-- Highlights must live in Workspace (client-only instance) to render on 3D parts.
+marker.Parent=workspace
 local function tourUpdate(info)
  if not info or not info.active then
   guide.Visible=false;marker.Enabled=false;marker.Adornee=nil
