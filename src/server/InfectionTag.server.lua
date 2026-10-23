@@ -294,6 +294,7 @@ RunService.Heartbeat:Connect(function(dt)
  accumulator=0
  if round.phase~="Playing" and round.phase~="FinalEscape" then return end
  local now=os.clock()
+ if now-lastHudUpdate>=1 then lastHudUpdate=now;status() end
  if now>=round.ends or (round.escapeAt and now>=round.escapeAt) then
   cleanupRound("Runners");return
  end
