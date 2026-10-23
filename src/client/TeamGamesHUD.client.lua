@@ -79,7 +79,8 @@ local function showDefense(s)
  action.Visible=s.phase=="Lobby"
 end
 defense.OnClientEvent:Connect(function(kind,details)
- if kind=="DefenseState" then showDefense(details) end
+ if kind=="DefenseState" then showDefense(details)
+ elseif kind=="DefenseExited" then panel.Visible=false;lastMode=nil end
 end)
 local function showTag(s)
  lastMode="ZOMBIE_TAG"
