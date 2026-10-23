@@ -81,6 +81,15 @@
       },
       "DefenseNavigation": {
         "$path": "src/server/DefenseNavigation.lua"
+      },
+      "StoryXGalleryCatalog": {
+        "$path": "src/server/StoryXGalleryCatalog.lua"
+      },
+      "StoryXGalleryAssets": {
+        "$path": "src/server/StoryXGalleryAssets.lua"
+      },
+      "StoryXGalleryWorld": {
+        "$path": "src/server/StoryXGalleryWorld.server.lua"
       }
     },
     "StarterPlayer": {
@@ -116,6 +125,9 @@
         },
         "TeamGamesHUD": {
           "$path": "src/client/TeamGamesHUD.client.lua"
+        },
+        "StoryXGallery": {
+          "$path": "src/client/StoryXGallery.client.lua"
         }
       }
     }
