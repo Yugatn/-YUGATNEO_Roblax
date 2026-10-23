@@ -4,6 +4,7 @@ local Players=game:GetService("Players")
 local ReplicatedStorage=game:GetService("ReplicatedStorage")
 local RunService=game:GetService("RunService")
 local Rewards=require(script.Parent:WaitForChild("WorldRewards"))
+local TagRules=require(script.Parent:WaitForChild("InfectionRules"))
 local event=ReplicatedStorage:FindFirstChild("StoryXTagEvent") or Instance.new("RemoteEvent")
 event.Name="StoryXTagEvent";event.Parent=ReplicatedStorage
 local folder=Instance.new("Folder");folder.Name="STORY_X_ZOMBIE_TAG";folder.Parent=workspace
@@ -205,7 +206,7 @@ local function start()
  if #fresh<2 then status() return end
  round.number+=1;round.phase="Playing";round.started=os.clock()
  -- Playtime is 30m or 60m when published; short Studio override aids testing.
- round.ends=os.clock()+(RunService:IsStudio() and math.min(180,round.duration) or round.duration)
+ round.ends=os.clock()+TagRules.timeLimit(round.duration/60,RunService:IsStudio())
  round.initial=#fresh-1;round.escapeAt=nil
  roster={};progress={}
  local first=rng:NextInteger(1,#fresh)
@@ -316,7 +317,7 @@ RunService.Heartbeat:Connect(function(dt)
      progress[k]=progress[k] or now
      local held=now-progress[k]
      event:FireClient(chaser,"TagProgress",{target=uid,seconds=math.min(3,held)})
-     if held>=3 and roster[uid] and roster[uid].role=="Runner" then
+     if TagRules.captured(progress[k],now,true,(cpos.Position-spos.Position).Magnitude) and roster[uid] and roster[uid].role=="Runner" then
       roster[uid].role="Chaser"
       roster[uid].infectAt=now+5
       visualizeRole(survivor,true)
@@ -334,8 +335,7 @@ RunService.Heartbeat:Connect(function(dt)
  end
  if infectedChanged then
   local survived=roleCount("Runner")
-  local threshold=round.initial>=5 and 2 or 1
-  if survived>0 and survived<=threshold and survived<round.initial and not round.escapeAt then
+  if TagRules.finalEscapeAllowed(round.initial,survived) and not round.escapeAt then
    round.phase="FinalEscape"
    round.escapeAt=math.min(round.ends,now+60)
    status("Финальный побег! Осталось продержаться 60 секунд.")
