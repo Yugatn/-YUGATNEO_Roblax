@@ -5,6 +5,8 @@ local ReplicatedStorage=game:GetService("ReplicatedStorage")
 local RunService=game:GetService("RunService")
 local Rules=require(script.Parent:WaitForChild("DefenseRules"))
 local Rewards=require(script.Parent:WaitForChild("WorldRewards"))
+local Tactics=require(script.Parent:WaitForChild("DefenseTactics"))
+local Navigation=require(script.Parent:WaitForChild("DefenseNavigation"))
 local event=ReplicatedStorage:FindFirstChild("StoryXDefenseEvent") or Instance.new("RemoteEvent")
 event.Name="StoryXDefenseEvent";event.Parent=ReplicatedStorage
 local folder=Instance.new("Folder");folder.Name="STORY_X_COOP_DEFENSE";folder.Parent=workspace
@@ -47,14 +49,21 @@ end
 local function roster(a)
  local members={}
  for uid,member in pairs(a.members) do
-  table.insert(members,{id=uid,name=member.name,role=member.role,ammo=member.ammo})
+  table.insert(members,{id=uid,name=member.name,role=member.role,ammo=member.ammo,
+    kills=member.kills or 0,repairs=member.repairs or 0,
+    crafts=member.crafts or 0,supplies=member.supplies or 0})
  end
  return members
 end
 local function update(a,message)
  local payload={mode=a.id,phase=a.phase,preset=a.preset,
   round=a.round,rounds=Rules.presets[a.preset].rounds,
-  core=a.coreHealth,enemyCount=#a.enemies,roster=roster(a),message=message}
+  core=a.coreHealth,enemyCount=#a.enemies,roster=roster(a),message=message,
+  salvage=a.salvage,plan=a.plan,sites={}} 
+ for i,site in ipairs(a.barricades) do
+  table.insert(payload.sites,{id=i,level=site.level,
+   health=math.floor(site.health),maxHealth=site.maxHealth})
+ end
  for uid in pairs(a.members) do
   local p=Players:GetPlayerByUserId(uid)
   if p then event:FireClient(p,"DefenseState",payload) end
@@ -64,6 +73,7 @@ local function removeFrom(a,uid)
  local member=a.members[uid]
  if not member then return end
  a.members[uid]=nil
+ a.votes[uid]=nil
  local p=Players:GetPlayerByUserId(uid)
  if p then p:SetAttribute("StoryXTeamMode",nil) end
 end
@@ -87,7 +97,8 @@ local function finish(a,won)
    local p=Players:GetPlayerByUserId(uid)
    if p then p:SetAttribute("StoryXTeamMode",nil);event:FireClient(p,"DefenseExited",{mode=a.id}) end
   end
-  a.phase="Lobby";a.members={};a.coreHealth=150;a.round=0;a.edition+=1
+  a.phase="Lobby";a.members={};a.votes={};a.plan="Balanced"
+  a.coreHealth=150;a.round=0;a.edition+=1
   update(a)
  end)
 end
@@ -104,7 +115,8 @@ local function createEnemy(a,i,round)
  local spawnPos=a.origin+Vector3.new(math.cos(spawnAngle)*57,4,math.sin(spawnAngle)*57)
  model:PivotTo(CFrame.lookAt(spawnPos,a.corePos))
  local bot={model=model,health=Rules.resistance(a.cfg,round),
-  position=spawnPos,lastAttack=0,speed=a.kind=="Robots" and 8 or 11}
+  position=spawnPos,lastAttack=0,speed=a.kind=="Robots" and 8 or 11,
+  route={},routeIndex=1,replanAt=0}
  local click=Instance.new("ClickDetector");click.MaxActivationDistance=95;click.Parent=body
  click.MouseClick:Connect(function(player)
   if a.phase~="Playing" or bot.health<=0 or not a.members[player.UserId] then return end
@@ -122,14 +134,21 @@ local function createEnemy(a,i,round)
   if obstruction then return end
   member.lastShot=now
   member.ammo-=1
-  bot.health-=member.role=="Defender" and 27 or 21
-  if bot.health<=0 then bot.model:Destroy() end
+  bot.health-=Tactics.hitDamage(member.role=="Defender" and 27 or 21,a.plan)
+  if bot.health<=0 then
+    bot.model:Destroy()
+    a.salvage=Tactics.awardSalvage(a.salvage,"bot")
+    member.kills=(member.kills or 0)+1
+  end
   update(a)
  end)
  table.insert(a.enemies,bot)
 end
 local function beginRound(a)
  if a.phase~="Playing" then return end
+ if a.round>0 then
+   a.salvage=Tactics.awardSalvage(a.salvage,"wave")
+ end
  a.round+=1
  if a.round>Rules.presets[a.preset].rounds then finish(a,true) return end
  for _,enemy in ipairs(a.enemies) do if enemy.model then enemy.model:Destroy() end end
@@ -141,12 +160,20 @@ local function beginRound(a)
 end
 local function start(a)
  if a.phase~="Lobby" or #roster(a)==0 then return end
- a.phase="Playing";a.coreHealth=150;a.round=0
+ a.phase="Playing";a.coreHealth=150;a.round=0;a.salvage=15
+ local teamIds={}
+ for uid in pairs(a.members) do table.insert(teamIds,uid) end
+ a.plan=Tactics.teamPlan(a.votes,teamIds)
+ for _,site in ipairs(a.barricades) do
+   site.level=0;site.health=0;site.maxHealth=0
+   site.blocker.CanCollide=false;site.blocker.Transparency=1
+ end
  a.cfg=Rules.config(a.preset,#roster(a))
  if a.botFolder then a.botFolder:Destroy() end
  a.botFolder=Instance.new("Folder");a.botFolder.Name="SessionBots";a.botFolder.Parent=a.folder
  for uid,m in pairs(a.members) do
-  m.ammo=60;m.lastShot=0;m.lastSupply=0;m.lastRepair=0
+  m.ammo=60;m.lastShot=-100;m.lastSupply=-100;m.lastRepair=-100
+  m.kills=0;m.crafts=0;m.repairs=0;m.supplies=0
   local p=Players:GetPlayerByUserId(uid)
   if p then transport(p,a.origin+Vector3.new(0,5,-17)) end
  end
@@ -159,7 +186,8 @@ local function enter(a,player)
  if a.phase=="Playing" and not a.members[player.UserId] then return end
  if not a.members[player.UserId] then
   if #roster(a)>=3 then return end
-  a.members[player.UserId]={name=player.DisplayName,role="Defender",ammo=60,lastShot=0}
+  a.members[player.UserId]={name=player.DisplayName,role="Defender",ammo=60,lastShot=0,
+   kills=0,repairs=0,crafts=0,supplies=0}
  end
  player:SetAttribute("StoryXTeamMode",a.id)
  transport(player,a.origin+Vector3.new(0,5,-47))
@@ -169,7 +197,8 @@ local function makeArena(id,kind,origin,spiralStep)
  local f=Instance.new("Folder");f.Name=id;f.Parent=folder
  local a={id=id,kind=kind,origin=origin,folder=f,corePos=origin,
    phase="Lobby",members={},enemies={},round=0,edition=1,
-   coreHealth=150,preset=kind=="Robots" and "Robots10" or "Shadows10"}
+   coreHealth=150,preset=kind=="Robots" and "Robots10" or "Shadows10",
+   salvage=0,plan="Balanced",votes={},barricades={}}
  arenas[id]=a
  block(f,"Ground",Vector3.new(136,2,136),CFrame.new(origin),
   Color3.fromRGB(20,24,34),true)
@@ -223,6 +252,8 @@ local function makeArena(id,kind,origin,spiralStep)
   local now=os.clock()
   if now-(m.lastRepair or -100)<8 then return end
   m.lastRepair=now;a.coreHealth=Rules.restore(m.role,a.coreHealth)
+  if a.plan=="Fortify" then a.coreHealth=math.min(150,a.coreHealth+3) end
+  m.repairs=(m.repairs or 0)+1
   update(a,"Команда укрепила защиту")
  end)
  local supplyPost=block(f,"SupplyDepot",Vector3.new(8,4,6),
@@ -233,14 +264,15 @@ local function makeArena(id,kind,origin,spiralStep)
   local now=os.clock()
   if now-(m.lastSupply or -100)<6 then return end
   m.lastSupply=now
-  m.ammo=Rules.replenish(m.role,m.ammo)
+  m.ammo=math.min(120,Rules.replenish(m.role,m.ammo)+Tactics.supplyBonus(a.plan))
+  m.supplies=(m.supplies or 0)+1
   if m.role=="Support" then
    -- Logistics matter: a supporter can recharge nearby teammates too.
    for uid,other in pairs(a.members) do
     if uid~=p.UserId then
      local ally=Players:GetPlayerByUserId(uid)
      if ally and inRange(ally,supplyPost.Position,28) then
-      other.ammo=Rules.replenish("Support",other.ammo)
+      other.ammo=math.min(120,Rules.replenish("Support",other.ammo)+Tactics.supplyBonus(a.plan))
      end
     end
    end
