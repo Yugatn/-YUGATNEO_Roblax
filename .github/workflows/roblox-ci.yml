@@ -25,6 +25,8 @@ jobs:
         uses: actions/checkout@v4
       - name: Validate Story X module wiring
         run: python3 tools/validate_storyx_project.py
+      - name: Validate Story X gallery art inventory
+        run: python3 tools/validate_storyx_gallery_assets.py
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
       - name: Install Rojo CLI
