@@ -127,11 +127,18 @@ for i,entry in ipairs(Catalog.entries) do
     exhibit.Name="Artwork_"..entry.id
     exhibit.Parent=folder
     local panelCF=CFrame.new(center+Vector3.new(x,9,z))
-        *CFrame.Angles(0,north and 0 or math.pi,0)
+        *CFrame.Angles(0,north and math.pi or 0,0)
     local canvas=block(exhibit,"PixelCanvas",Vector3.new(23,17,0.8),panelCF,
         Color3.fromRGB(20,26,51),false)
-    local edge=block(exhibit,"CanvasGlow",Vector3.new(24,18,0.3),
-        panelCF*CFrame.new(0,0,0.65),tint,false,Enum.Material.Neon,0.16)
+    -- Thin illuminated frame pieces, not a solid overlay hiding the artwork.
+    for _,side in ipairs({-1,1}) do
+        block(exhibit,"FrameVertical_"..side,Vector3.new(0.75,18,0.3),
+            panelCF*CFrame.new(side*12.0,0,-0.48),
+            tint,false,Enum.Material.Neon,0.12)
+        block(exhibit,"FrameHorizontal_"..side,Vector3.new(24,0.75,0.3),
+            panelCF*CFrame.new(0,side*9,-0.48),
+            tint,false,Enum.Material.Neon,0.12)
+    end
     local surface=Instance.new("SurfaceGui")
     surface.Name="StoryXArtwork"
     surface.Face=Enum.NormalId.Front
