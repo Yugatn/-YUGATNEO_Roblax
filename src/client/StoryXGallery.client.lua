@@ -65,6 +65,63 @@ local function button(txt,callback)
  b.Activated:Connect(callback)
  return b
 end
+-- An optional in-world guide uses only per-player client highlights.
+-- No timer, mandatory quiz or navigational information about other players.
+local guide=Instance.new("Frame")
+guide.Name="GuidedTour"
+guide.Position=UDim2.new(0,12,0,88)
+guide.Size=UDim2.fromOffset(282,124)
+guide.BackgroundColor3=Color3.fromRGB(8,31,43)
+guide.BorderSizePixel=0;guide.Visible=false
+guide.Parent=gui
+local guideCorner=Instance.new("UICorner")
+guideCorner.CornerRadius=UDim.new(0,10);guideCorner.Parent=guide
+local guideLabel=Instance.new("TextLabel")
+guideLabel.Position=UDim2.fromOffset(10,8)
+guideLabel.Size=UDim2.new(1,-20,0,66)
+guideLabel.BackgroundTransparency=1
+guideLabel.TextColor3=Color3.fromRGB(175,250,222)
+guideLabel.Font=Enum.Font.GothamBold
+guideLabel.TextWrapped=true
+guideLabel.TextSize=14
+guideLabel.Text="Экскурсия"
+guideLabel.Parent=guide
+local stop=Instance.new("TextButton")
+stop.Position=UDim2.new(0,10,1,-42)
+stop.Size=UDim2.new(1,-20,0,34)
+stop.Text="ЗАВЕРШИТЬ ЭКСКУРСИЮ"
+stop.TextColor3=Color3.new(1,1,1)
+stop.TextSize=13;stop.Font=Enum.Font.GothamBold
+stop.BackgroundColor3=Color3.fromRGB(38,89,102)
+stop.Parent=guide
+stop.Activated:Connect(function()remote:FireServer("StopTour")end)
+local marker=Instance.new("Highlight")
+marker.Name="NextStoryXArtwork"
+marker.FillTransparency=0.86
+marker.OutlineTransparency=0.05
+marker.OutlineColor=Color3.fromRGB(248,211,92)
+marker.FillColor=Color3.fromRGB(93,251,219)
+marker.DepthMode=Enum.HighlightDepthMode.Occluded
+marker.Enabled=false
+marker.Parent=gui
+local function tourUpdate(info)
+ if not info or not info.active then
+  guide.Visible=false;marker.Enabled=false;marker.Adornee=nil
+  return
+ end
+ guide.Visible=true
+ guideLabel.Text="ЭКСКУРСИЯ • "..tostring(info.index).."/"..tostring(info.total)..
+  "\nСледующий экспонат: "..tostring(info.nextTitle or "—")
+ local world=workspace:FindFirstChild("STORY_X_GALLERY")
+ local kiosk=world and world:FindFirstChild("Kiosk_"..tostring(info.nextId))
+ if kiosk then
+  marker.Adornee=kiosk
+  marker.Enabled=true
+ else
+  marker.Enabled=false;marker.Adornee=nil
+ end
+end
+
 local current
 local progressLabel
 local answerLabel
@@ -117,9 +174,18 @@ remote.OnClientEvent:Connect(function(action,payload)
     "✓ Ответ принят! Экспонат изучен." or
     "Пока неверно. Проверь сюжетную карточку ещё раз."
   end
+ elseif action=="Tour" then
+  tourUpdate(payload)
  elseif action=="Notice" then
   shell.Visible=true
   clear()
   paragraph(tostring(payload),100,17)
  end
+end)
+
+-- Guide state is server-scoped. Request once after loading this LocalScript;
+-- the server will reject requests from outside its gallery.
+task.defer(function()remote:FireServer("Status")end)
+player.CharacterAdded:Connect(function()
+ guide.Visible=false;marker.Enabled=false;marker.Adornee=nil
 end)
