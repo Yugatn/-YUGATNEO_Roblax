@@ -150,6 +150,21 @@ for i,entry in ipairs(Catalog.entries) do
     background.BorderSizePixel=0
     background.BackgroundColor3=Color3.fromRGB(10,16,32)
     background.Parent=surface
+    -- Pixel composition remains below any future uploaded artwork,
+    -- so Roblox asset permission/load errors do not erase the exhibition.
+    local pattern=entry.pattern
+    for y,line in ipairs(pattern) do
+        for px=1,#line do
+            if line:sub(px,px)=="1" then
+                local pixel=Instance.new("Frame")
+                pixel.BorderSizePixel=0
+                pixel.Size=UDim2.fromScale(0.063,0.072)
+                pixel.Position=UDim2.fromScale(0.2+(px-1)*0.065,0.13+(y-1)*0.078)
+                pixel.BackgroundColor3=tint
+                pixel.Parent=background
+            end
+        end
+    end
     local asset=Images.get(entry.id)
     if asset then
         local image=Instance.new("ImageLabel")
@@ -158,22 +173,8 @@ for i,entry in ipairs(Catalog.entries) do
         image.Image="rbxassetid://"..tostring(asset)
         image.ScaleType=Enum.ScaleType.Fit
         image.BackgroundTransparency=1
+        image.ZIndex=2
         image.Parent=background
-    else
-        -- Procedural pixel placeholder = immediately viewable art without uploads.
-        local pattern=entry.pattern
-        for y,line in ipairs(pattern) do
-            for px=1,#line do
-                if line:sub(px,px)=="1" then
-                    local pixel=Instance.new("Frame")
-                    pixel.BorderSizePixel=0
-                    pixel.Size=UDim2.fromScale(0.063,0.072)
-                    pixel.Position=UDim2.fromScale(0.2+(px-1)*0.065,0.13+(y-1)*0.078)
-                    pixel.BackgroundColor3=tint
-                    pixel.Parent=background
-                end
-            end
-        end
     end
     local caption=block(exhibit,"ExhibitCaption",Vector3.new(22,1.5,0.8),
         panelCF*CFrame.new(0,-10,0),tint,false,Enum.Material.Neon,0.18)
