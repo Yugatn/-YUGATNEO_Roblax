@@ -1,7 +1,9 @@
 -- STORY X GALLERY: original generated art, exhibition rooms and safe quizzes.
 local Players=game:GetService("Players")
 local ReplicatedStorage=game:GetService("ReplicatedStorage")
+local DataStoreService=game:GetService("DataStoreService")
 local Catalog=require(script.Parent:WaitForChild("StoryXGalleryCatalog"))
+local store=DataStoreService:GetDataStore("YUGATNEO_STORY_X_GALLERY_V1")
 local event=Instance.new("RemoteEvent")
 event.Name="StoryXGalleryEvent";event.Parent=ReplicatedStorage
 local center=Vector3.new(900,20,420)
@@ -11,6 +13,7 @@ local violet=Color3.fromRGB(168,104,244)
 local gold=Color3.fromRGB(252,191,88)
 local palette={cyan=cyan,violet=violet,amber=gold,green=Color3.fromRGB(91,233,125)}
 local seen,solved,focused,locations,lastAction={},{},{},{},{}
+local persisted,saving={},{} 
 local function part(name,size,cf,color,collide,material)
  local p=Instance.new("Part")
  p.Name=name;p.Size=size;p.CFrame=cf;p.Anchored=true
@@ -45,7 +48,8 @@ end
 local function state(p)
  local count=0
  for id in pairs(solved[p] or {}) do if Catalog.find(id) then count+=1 end end
- event:FireClient(p,"Progress",{completed=count,total=#Catalog.exhibits,seen=seen[p] or {},solved=solved[p] or {}})
+ event:FireClient(p,"Progress",{completed=count,total=#Catalog.exhibits,
+  seen=seen[p] or {},solved=solved[p] or {},persistent=persisted[p]==true})
 end
 local floor=part("MuseumFloor",Vector3.new(153,2,128),CFrame.new(center),Color3.fromRGB(10,22,40))
 for _,z in ipairs({-64,64}) do
@@ -144,12 +148,75 @@ event.OnServerEvent:Connect(function(p,action,id,answer)
   if not pos or focused[p]~=id or not nearby(p,pos,22) then return end
   solved[p]=solved[p] or {}
   local correct=Catalog.check(id,answer)
-  if correct then solved[p][id]=true end
+  if correct then
+   solved[p][id]=true
+   task.spawn(save,p)
+  end
   event:FireClient(p,"AnswerResult",{correct=correct,id=id})
   state(p)
  end
 end)
+local function save(p)
+ if not persisted[p] or saving[p] then return end
+ saving[p]=true
+ local seenSnapshot={}
+ local solvedSnapshot={}
+ for id in pairs(seen[p] or {}) do if Catalog.find(id) then seenSnapshot[id]=true end end
+ for id in pairs(solved[p] or {}) do if Catalog.find(id) then solvedSnapshot[id]=true end end
+ local ok,err=pcall(function()
+  store:UpdateAsync("player_"..p.UserId,function(previous)
+   local data=type(previous)=="table" and previous or {}
+   local savedSeen=type(data.seen)=="table" and data.seen or {}
+   local savedSolved=type(data.solved)=="table" and data.solved or {}
+   for id in pairs(seenSnapshot) do savedSeen[id]=true end
+   for id in pairs(solvedSnapshot) do savedSolved[id]=true end
+   return {seen=savedSeen,solved=savedSolved}
+  end)
+ end)
+ saving[p]=nil
+ if not ok then warn("[Story X Gallery] Save failed:",err) end
+end
+Players.PlayerAdded:Connect(function(p)
+ seen[p]={};solved[p]={}
+ task.spawn(function()
+  local ok,data=pcall(function() return store:GetAsync("player_"..p.UserId) end)
+  if p.Parent~=Players then return end
+  if ok and type(data)=="table" then
+   for _,item in ipairs(Catalog.exhibits) do
+    if type(data.seen)=="table" and data.seen[item.id] then seen[p][item.id]=true end
+    if type(data.solved)=="table" and data.solved[item.id] then solved[p][item.id]=true end
+   end
+  end
+  persisted[p]=ok
+  state(p)
+ end)
+end)
 Players.PlayerRemoving:Connect(function(p)
+ save(p)
  focused[p]=nil;lastAction[p]=nil;seen[p]=nil;solved[p]=nil
+ persisted[p]=nil;saving[p]=nil
+end)
+for _,p in ipairs(Players:GetPlayers()) do
+ seen[p]=seen[p] or {};solved[p]=solved[p] or {}
+ task.spawn(function()
+  local ok,data=pcall(function()return store:GetAsync("player_"..p.UserId)end)
+  if p.Parent~=Players then return end
+  if ok and type(data)=="table" then
+   for _,item in ipairs(Catalog.exhibits) do
+    if type(data.seen)=="table" and data.seen[item.id] then seen[p][item.id]=true end
+    if type(data.solved)=="table" and data.solved[item.id] then solved[p][item.id]=true end
+   end
+  end
+  persisted[p]=ok;state(p)
+ end)
+end
+task.spawn(function()
+ while true do
+  task.wait(120)
+  for p in pairs(seen) do task.spawn(save,p) end
+ end
+end)
+game:BindToClose(function()
+ for _,p in ipairs(Players:GetPlayers()) do save(p) end
 end)
 print("[STORY X] Ten interactive gallery scenes and chapter quizzes loaded.")
