@@ -145,3 +145,20 @@ The `feature/story-x-defense-tactics-crafting` branch extends both wave-defense 
 **Status:** source code implemented; Studio navigation, mobile interaction, balancing and multiplayer validation pending. The module smoke test has been authored but not run in Roblox Studio. See [full manual build and test guide](docs/DEFENSE_TACTICS_IMPLEMENTATION_RU.md) and [tactics smoke tests](tests/DefenseTacticsSmokeTest.lua).
 
 Use `git switch feature/story-x-defense-tactics-crafting`, `rojo serve default.project.json` and connect Roblox Studio Rojo plugin. Feature-branch builds are now included in GitHub Actions triggers, with publication still manual.
+
+
+## Interactive Story X Art Gallery / Галерея Сюжета Икс
+
+**Branch:** `feature/story-x-spiral-gallery`. Adds the first explorable **Story X Gallery** dimension, accessible by a ProximityPrompt on spiral step 58. The museum is a walkable 153×128-stud room with a central observer sculpture and **10 independent interactive art exhibits** adapted from author **Югатн**'s literary universe `Yugatn/story-x`.
+
+Visitors can view original procedural holographic pixel mosaics, read chapter interpretations, answer optional server-checked questions, and return to the Matrix, chess hall, library, cognitive arcade or spiral. A **voluntary ten-exhibit guided tour** starts at the observer sculpture, locally highlights the next display, can be stopped at any time and does not require correct quiz answers. The **Atlas X terminal** lets visitors read all chapter summaries and review their explored/completed exhibits. Correct answers are **educational discovery flags**, not psychological grades or real-world money. `DataStoreService` attempts to save visited and completed exhibits; if unavailable, the experience works for the session without promising persistence.
+
+**Illustrations:** No uploaded Story X Library images have been imported into Roblox yet. Each gallery card defaults to an original procedural mosaic. To substitute licensed author art, upload the file in Roblox Creator Dashboard and set a real `imageAsset` ID in `src/server/StoryXGalleryCatalog.lua`. Do **not** invent an asset ID or import film stills without rights.
+
+- Server: `StoryXGalleryCatalog.lua`, `StoryXGallery.server.lua`.
+- Client: `StoryXGallery.client.lua`.
+- Manual Studio test: `tests/StoryXGallerySmokeTest.lua`.
+- Asset inventory: `docs/STORY_X_GALLERY_ART_MANIFEST.json`; CI checks image IDs, rights approval and catalog consistency via `tools/validate_storyx_gallery_assets.py`.
+- [Architecture, source-art installation, safety and acceptance plan](docs/STORY_X_GALLERY_RU.md).
+
+**Status:** source implementation only; no published Roblox Studio gameplay proof. Run `rojo serve default.project.json`, then test with multiple players and a separate DataStore-enabled test universe before merging.

@@ -1,0 +1,118 @@
+{
+  "schemaVersion": 1,
+  "project": "YUGATNEO MATRIX / Story X Gallery",
+  "sourceOfTruth": "src/server/StoryXGalleryCatalog.lua",
+  "legalNote": "Do not substitute copyrighted film screenshots or invent Roblox asset IDs. Upload owned or licensed artwork after moderation.",
+  "entries": [
+    {
+      "id": "observer",
+      "title": "Наблюдатель",
+      "sourceFile": "gallery-source/observer.png",
+      "robloxImageAssetId": 0,
+      "rightsStatus": "TO_VERIFY",
+      "assetStatus": "PROCEDURAL_PLACEHOLDER",
+      "creatorCredit": "Югатн — литературный оригинал; права на будущую иллюстрацию проверить",
+      "recommendedAspectRatio": "3:2",
+      "altText": ""
+    },
+    {
+      "id": "mira",
+      "title": "Мира — другой субъект",
+      "sourceFile": "gallery-source/mira.png",
+      "robloxImageAssetId": 0,
+      "rightsStatus": "TO_VERIFY",
+      "assetStatus": "PROCEDURAL_PLACEHOLDER",
+      "creatorCredit": "Югатн — литературный оригинал; права на будущую иллюстрацию проверить",
+      "recommendedAspectRatio": "3:2",
+      "altText": ""
+    },
+    {
+      "id": "trace",
+      "title": "След",
+      "sourceFile": "gallery-source/trace.png",
+      "robloxImageAssetId": 0,
+      "rightsStatus": "TO_VERIFY",
+      "assetStatus": "PROCEDURAL_PLACEHOLDER",
+      "creatorCredit": "Югатн — литературный оригинал; права на будущую иллюстрацию проверить",
+      "recommendedAspectRatio": "3:2",
+      "altText": ""
+    },
+    {
+      "id": "symbiont",
+      "title": "Симбионт",
+      "sourceFile": "gallery-source/symbiont.png",
+      "robloxImageAssetId": 0,
+      "rightsStatus": "TO_VERIFY",
+      "assetStatus": "PROCEDURAL_PLACEHOLDER",
+      "creatorCredit": "Югатн — литературный оригинал; права на будущую иллюстрацию проверить",
+      "recommendedAspectRatio": "3:2",
+      "altText": ""
+    },
+    {
+      "id": "tv",
+      "title": "Телеэкран после перемен",
+      "sourceFile": "gallery-source/tv.png",
+      "robloxImageAssetId": 0,
+      "rightsStatus": "TO_VERIFY",
+      "assetStatus": "PROCEDURAL_PLACEHOLDER",
+      "creatorCredit": "Югатн — литературный оригинал; права на будущую иллюстрацию проверить",
+      "recommendedAspectRatio": "3:2",
+      "altText": ""
+    },
+    {
+      "id": "catharsis",
+      "title": "Cinema Catharsis",
+      "sourceFile": "gallery-source/catharsis.png",
+      "robloxImageAssetId": 0,
+      "rightsStatus": "TO_VERIFY",
+      "assetStatus": "PROCEDURAL_PLACEHOLDER",
+      "creatorCredit": "Югатн — литературный оригинал; права на будущую иллюстрацию проверить",
+      "recommendedAspectRatio": "3:2",
+      "altText": ""
+    },
+    {
+      "id": "future",
+      "title": "Дневник 2300 года",
+      "sourceFile": "gallery-source/future.png",
+      "robloxImageAssetId": 0,
+      "rightsStatus": "TO_VERIFY",
+      "assetStatus": "PROCEDURAL_PLACEHOLDER",
+      "creatorCredit": "Югатн — литературный оригинал; права на будущую иллюстрацию проверить",
+      "recommendedAspectRatio": "3:2",
+      "altText": ""
+    },
+    {
+      "id": "matrix",
+      "title": "Пробуждение",
+      "sourceFile": "gallery-source/matrix.png",
+      "robloxImageAssetId": 0,
+      "rightsStatus": "TO_VERIFY",
+      "assetStatus": "PROCEDURAL_PLACEHOLDER",
+      "creatorCredit": "Югатн — литературный оригинал; права на будущую иллюстрацию проверить",
+      "recommendedAspectRatio": "3:2",
+      "altText": ""
+    },
+    {
+      "id": "other",
+      "title": "Другой",
+      "sourceFile": "gallery-source/other.png",
+      "robloxImageAssetId": 0,
+      "rightsStatus": "TO_VERIFY",
+      "assetStatus": "PROCEDURAL_PLACEHOLDER",
+      "creatorCredit": "Югатн — литературный оригинал; права на будущую иллюстрацию проверить",
+      "recommendedAspectRatio": "3:2",
+      "altText": ""
+    },
+    {
+      "id": "unknown",
+      "title": "Икс — неизвестное",
+      "sourceFile": "gallery-source/unknown.png",
+      "robloxImageAssetId": 0,
+      "rightsStatus": "TO_VERIFY",
+      "assetStatus": "PROCEDURAL_PLACEHOLDER",
+      "creatorCredit": "Югатн — литературный оригинал; права на будущую иллюстрацию проверить",
+      "recommendedAspectRatio": "3:2",
+      "altText": ""
+    }
+  ]
+}
