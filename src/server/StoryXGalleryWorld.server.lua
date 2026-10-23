@@ -216,7 +216,17 @@ prompt(entry,"Войти","Сюжет Икс",function(p)
     state(p)
     event:FireClient(p,"Entered",{})
 end)
-destinations[1][3]=platform+Vector3.new(0,4,3)
+-- Return directly to the accessible road, not outside its solid guardrail.
+destinations[1][3]=path+Vector3.new(0,5,0)
+local roadside=block(folder,"RoadsideGalleryTerminal",Vector3.new(6,7,3),
+    CFrame.new(path+Vector3.new(0,4,0)),CYAN,false,Enum.Material.Neon,0.27)
+label(roadside,"ГАЛЕРЕЯ СЮЖЕТА ИКС • ВХОД",CYAN,350,68)
+prompt(roadside,"Открыть галерею","Story X",function(p)
+    if not close(p,roadside.Position,15) then return end
+    teleport(p,center+Vector3.new(0,5,25))
+    state(p)
+    event:FireClient(p,"Entered",{})
+end)
 for _,data in ipairs(destinations) do
     local name,offset,target=data[1],data[2],data[3]
     local gate=block(folder,"Exit_"..name,Vector3.new(9,5,4),
