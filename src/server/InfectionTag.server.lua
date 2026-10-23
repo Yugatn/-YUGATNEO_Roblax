@@ -124,11 +124,16 @@ end
 for i=1,3 do
  local car=Instance.new("Model");car.Name="HideCar_"..i;car.Parent=folder
  local base=origin+Vector3.new(-40+(i-1)*34,5,-50)
- part("CarBody",Vector3.new(12,4,7),base,Color3.fromRGB(59,118,148),car)
- part("CarRoof",Vector3.new(7,1,6),base+Vector3.new(0,4,0),
+ -- Open-body hideable car: leave the seat accessible; avoid solid hull clipping.
+ part("CarFloor",Vector3.new(12,1,7),base,Color3.fromRGB(59,118,148),car)
+ for _,offset in ipairs({-5.4,5.4}) do
+  part("CarSide",Vector3.new(0.8,3,7),
+   base+Vector3.new(offset,2,0),Color3.fromRGB(59,118,148),car)
+ end
+ part("CarRoof",Vector3.new(12,1,7),base+Vector3.new(0,5.5,0),
   Color3.fromRGB(42,69,85),car)
  local seat=Instance.new("Seat");seat.Name="HideSeat";seat.Size=Vector3.new(2,1,3)
- seat.Position=base+Vector3.new(0,3,0);seat.Anchored=true;seat.Parent=car
+ seat.Position=base+Vector3.new(0,2,0);seat.Anchored=true;seat.Parent=car
 end
 local lobby=origin+Vector3.new(0,2,-65)
 local startPost=part("QueueMarker",Vector3.new(7,5,5),lobby+Vector3.new(0,2,0),purple)
