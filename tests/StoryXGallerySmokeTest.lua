@@ -31,6 +31,12 @@ if world then
  check(world:FindFirstChild("MuseumFloor")~=nil,"safe walking floor")
  check(world:FindFirstChild("SpiralGalleryPortal")~=nil,"spiral entry kiosk")
  check(world:FindFirstChild("ToSpiral")~=nil,"return from exhibit to spiral")
+ local core=world:FindFirstChild("ObserverCore")
+ check(core~=nil and core:FindFirstChildOfClass("ProximityPrompt")~=nil,
+  "observer centerpiece provides guided walking tour")
+ local atlas=world:FindFirstChild("StoryXAtlasTerminal")
+ check(atlas~=nil and atlas:FindFirstChildOfClass("ProximityPrompt")~=nil,
+  "browsable atlas kiosk with private progress")
  for _,entry in ipairs(Catalog.exhibits) do
   local art=world:FindFirstChild("Artwork_"..entry.id)
   local kiosk=world:FindFirstChild("Kiosk_"..entry.id)
