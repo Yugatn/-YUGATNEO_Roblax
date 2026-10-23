@@ -82,7 +82,7 @@ local function showDefense(s)
   "\nBots: "..tostring(s.enemyCount or 0)..
   " • Team: "..#roles.." • Barriers: "..intact.."/4"
  tips.Text=(s.message and s.message~="" and s.message.."\n" or "")..
-  "Vote for team plan in lobby. Craft on pads; engineers repair, supporters supply."
+  (s.objective or "Coordinate team tasks and craft cover on pads.")
  action.Visible=s.phase=="Lobby"
 end
 defense.OnClientEvent:Connect(function(kind,details)
