@@ -83,6 +83,10 @@ local function finish(a,won)
  update(a,won and "Команда защитила базу!" or "База повреждена. Можно попробовать снова.")
  task.delay(12,function()
   if a.phase~="Finished" then return end
+  for uid in pairs(a.members) do
+   local p=Players:GetPlayerByUserId(uid)
+   if p then p:SetAttribute("StoryXTeamMode",nil);event:FireClient(p,"DefenseExited",{mode=a.id}) end
+  end
   a.phase="Lobby";a.members={};a.coreHealth=150;a.round=0;a.edition+=1
   update(a)
  end)
@@ -191,6 +195,12 @@ local function makeArena(id,kind,origin,spiralStep)
    if a.members[p.UserId] then a.members[p.UserId].role=spec[1];update(a) end
   end)
  end
+ local rejoinPost=block(f,"LobbyJoin",Vector3.new(7,5,6),
+  CFrame.new(origin+Vector3.new(39,3,-48)),Color3.fromRGB(49,162,124),true)
+ banner(rejoinPost,"JOIN CO-OP TEAM")
+ makePrompt(rejoinPost,"Войти в команду","Командная оборона",function(p)
+  if a.phase=="Lobby" and inRange(p,rejoinPost.Position,17) then enter(a,p) end
+ end)
  local startPost=block(f,"WaveLauncher",Vector3.new(9,5,7),
   CFrame.new(origin+Vector3.new(0,3,-58)),Color3.fromRGB(179,105,230),true)
  banner(startPost,"START 10 / 20 WAVES")
@@ -235,6 +245,7 @@ local function makeArena(id,kind,origin,spiralStep)
   CFrame.new(origin+Vector3.new(-42,5,-58)),Color3.fromRGB(75,205,240),false,Enum.Material.Neon)
  makePrompt(exit,"Вернуться в Матрицу","Добровольный выход",function(p)
   removeFrom(a,p.UserId);transport(p,Vector3.new(0,6,12));update(a)
+  if a.phase=="Playing" and #roster(a)==0 then finish(a,false) end
  end)
  -- On-spire gateway, matching SpiralWorld's helix math.
  local angle=math.pi+spiralStep*math.pi*6/144
@@ -264,6 +275,7 @@ event.OnServerEvent:Connect(function(p,action,mode)
  elseif action=="Exit" then
   if a.members[p.UserId] then
    removeFrom(a,p.UserId);transport(p,Vector3.new(0,6,12));update(a)
+   if a.phase=="Playing" and #roster(a)==0 then finish(a,false) end
   end
  elseif action=="ChangeRole" and a.phase=="Lobby" and a.members[p.UserId] then
   -- Role selection requires returning to physical role terminal; client cannot bypass it.
