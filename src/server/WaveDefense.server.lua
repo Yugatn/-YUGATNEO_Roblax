@@ -232,9 +232,35 @@ local function makeArena(id,kind,origin,spiralStep)
   if a.phase~="Playing" or not m or not inRange(p,supplyPost.Position,15) then return end
   local now=os.clock()
   if now-(m.lastSupply or -100)<6 then return end
-  m.lastSupply=now;m.ammo=Rules.replenish(m.role,m.ammo)
-  update(a)
+  m.lastSupply=now
+  m.ammo=Rules.replenish(m.role,m.ammo)
+  if m.role=="Support" then
+   -- Logistics matter: a supporter can recharge nearby teammates too.
+   for uid,other in pairs(a.members) do
+    if uid~=p.UserId then
+     local ally=Players:GetPlayerByUserId(uid)
+     if ally and inRange(ally,supplyPost.Position,28) then
+      other.ammo=Rules.replenish("Support",other.ammo)
+     end
+    end
+   end
+  end
+  update(a,"Команда получила новые энергетические заряды")
  end)
+ if a.kind=="Shadows" then
+  -- Two elevated walkways and ladders for optional upper-level cooperation.
+  for side=-1,1,2 do
+   local upper=origin+Vector3.new(side*38,13,5)
+   block(f,"ShadowBalcony_"..side,Vector3.new(19,2,52),
+    CFrame.new(upper),Color3.fromRGB(48,57,86),true)
+   local truss=Instance.new("TrussPart")
+   truss.Name="ShadowLadder_"..side
+   truss.Size=Vector3.new(3,14,3)
+   truss.CFrame=CFrame.new(upper+Vector3.new(-side*8,-6,-20))
+   truss.Anchored=true;truss.Color=Color3.fromRGB(135,106,175)
+   truss.Parent=f
+  end
+ end
  for i=1,6 do
   local angle=i*math.pi/3
   local pos=origin+Vector3.new(math.cos(angle)*29,3,math.sin(angle)*29)
