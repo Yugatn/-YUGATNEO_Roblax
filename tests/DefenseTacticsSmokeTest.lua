@@ -48,4 +48,11 @@ check(T.intercept(Vector3.new(0,0,40),Vector3.zero,barriers)==nil,
  "destroyed barrier no longer intercepts")
 check(Rules.count(Rules.config("Robots10",3),5)>0,
  "cooperative wave configuration still loads")
+check(string.find(T.objective(65,{},{{ammo=60}},20),"инженер")~=nil,
+ "urgent base damage takes priority")
+check(string.find(T.objective(150,{},{{ammo=60}},20),"укрепления")~=nil,
+ "team builder objective is displayed")
+check(string.find(T.objective(150,{
+ {health=75,level=1},{health=75,level=1}},{{ammo=3}},0),"Снабженец")~=nil,
+ "low charges request team supplies")
 print("[TACTICS] Pure rules smoke test completed. Live navigation and multiplayer remain unverified.")
