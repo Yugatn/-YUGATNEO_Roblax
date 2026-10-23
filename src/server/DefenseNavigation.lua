@@ -23,22 +23,24 @@ function Navigation.direction(bot,target,now)
     local start=bot.position
     local endPos=target
     task.spawn(function()
-      local path=PathfindingService:CreatePath({
-        AgentRadius=2,AgentHeight=6,AgentCanJump=false,WaypointSpacing=6,
-      })
-      local ok=pcall(function() path:ComputeAsync(start,endPos) end)
-      if ok and path.Status==Enum.PathStatus.Success and bot.model and bot.model.Parent
-          and bot.routeDestination and (bot.routeDestination-endPos).Magnitude<1 then
-        local points={}
-        for _,wp in ipairs(path:GetWaypoints()) do
-          table.insert(points,wp.Position)
+      local ok,err=pcall(function()
+        local path=PathfindingService:CreatePath({
+          AgentRadius=2,AgentHeight=6,AgentCanJump=false,WaypointSpacing=6,
+        })
+        local routeOk=pcall(function() path:ComputeAsync(start,endPos) end)
+        if routeOk and path.Status==Enum.PathStatus.Success
+            and bot.model and bot.model.Parent
+            and bot.routeDestination and (bot.routeDestination-endPos).Magnitude<1 then
+          local points={}
+          for _,wp in ipairs(path:GetWaypoints()) do table.insert(points,wp.Position) end
+          bot.route=points
+          bot.routeIndex=math.min(2,#points)
         end
-        bot.route=points
-        bot.routeIndex=math.min(2,#points)
-      end
+        path:Destroy()
+      end)
+      if not ok then warn("[StoryX Nav] Route failed",err) end
       bot.calculating=false
       computing=math.max(0,computing-1)
-      path:Destroy()
     end)
   end
   local waypoint=bot.route and bot.route[bot.routeIndex or 1]
