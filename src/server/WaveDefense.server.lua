@@ -283,6 +283,7 @@ event.OnServerEvent:Connect(function(p,action,mode)
  end
 end)
 local accumulator=0
+local lastHudUpdate=0
 RunService.Heartbeat:Connect(function(dt)
  accumulator+=dt;if accumulator<0.13 then return end
  dt=accumulator;accumulator=0
