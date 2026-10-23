@@ -13,7 +13,8 @@ local violet=Color3.fromRGB(168,104,244)
 local gold=Color3.fromRGB(252,191,88)
 local palette={cyan=cyan,violet=violet,amber=gold,green=Color3.fromRGB(91,233,125)}
 local seen,solved,focused,locations,lastAction={},{},{},{},{}
-local persisted,saving={},{} 
+local persisted,saving={},{}
+local save -- forward declaration: answer handler must call local persistence routine
 local function part(name,size,cf,color,collide,material)
  local p=Instance.new("Part")
  p.Name=name;p.Size=size;p.CFrame=cf;p.Anchored=true
@@ -190,7 +191,7 @@ event.OnServerEvent:Connect(function(p,action,id,answer)
   state(p)
  end
 end)
-local function save(p)
+save=function(p)
  if not persisted[p] or saving[p] then return false end
  saving[p]=true
  local seenSnapshot={}
