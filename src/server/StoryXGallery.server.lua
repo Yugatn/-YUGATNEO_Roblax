@@ -13,6 +13,7 @@ local violet=Color3.fromRGB(168,104,244)
 local gold=Color3.fromRGB(252,191,88)
 local palette={cyan=cyan,violet=violet,amber=gold,green=Color3.fromRGB(91,233,125)}
 local seen,solved,focused,locations,lastAction={},{},{},{},{}
+local tours={}
 local persisted,saving={},{}
 local save -- forward declaration: answer handler must call local persistence routine
 local function part(name,size,cf,color,collide,material)
@@ -52,6 +53,16 @@ local function state(p)
  event:FireClient(p,"Progress",{completed=count,total=#Catalog.exhibits,
   seen=seen[p] or {},solved=solved[p] or {},persistent=persisted[p]==true})
 end
+local function sendTour(p,message)
+ local index=tours[p]
+ local exhibit=index and Catalog.exhibits[index]
+ event:FireClient(p,"Tour",{
+  active=exhibit~=nil,index=index or 0,total=#Catalog.exhibits,
+  nextId=exhibit and exhibit.id or nil,
+  nextTitle=exhibit and exhibit.title or nil,
+  message=message,
+ })
+end
 local floor=part("MuseumFloor",Vector3.new(153,2,128),CFrame.new(center),Color3.fromRGB(10,22,40))
 for _,z in ipairs({-64,64}) do
  part("MuseumWall",Vector3.new(153,22,2),CFrame.new(center+Vector3.new(0,11,z)),Color3.fromRGB(13,29,46))
@@ -64,6 +75,16 @@ sculpture.Shape=Enum.PartType.Ball;sculpture.Transparency=0.4
 local core=part("ObserverCore",Vector3.new(4,4,4),CFrame.new(center+Vector3.new(0,8,0)),gold,false,Enum.Material.Neon)
 core.Shape=Enum.PartType.Ball
 sign(core,"YUGATNEO / STORY X",cyan)
+prompt(core,"Начать экскурсию","Маршрут из 10 картин",function(p)
+ if not nearby(p,core.Position,16) then return end
+ local index=1
+ -- Resume at the first not-yet-seen exhibit, never require a quiz answer.
+ for i,entry in ipairs(Catalog.exhibits) do
+  if not (seen[p] and seen[p][entry.id]) then index=i;break end
+ end
+ tours[p]=index
+ sendTour(p,"Следуй к подсвеченной картине; вопросы необязательны.")
+end)
 -- Recognizable 15x9 icon language: an eye, two observers, a trace spiral,
 -- circuit network, TV, film, archive clock, matrix code, two subjects and X.
 local function lit(index,x,y)
@@ -140,6 +161,16 @@ for i,exhibit in ipairs(Catalog.exhibits) do
   if not nearby(p,display.Position,17) then return end
   seen[p]=seen[p] or {};solved[p]=solved[p] or {}
   seen[p][exhibit.id]=true;focused[p]=exhibit.id
+  local index=tours[p]
+  if index and Catalog.exhibits[index].id==exhibit.id then
+   if index==#Catalog.exhibits then
+    tours[p]=nil
+    sendTour(p,"Маршрут завершён: ты изучил все десять глав!")
+   else
+    tours[p]=index+1
+    sendTour(p,"Следующий экспонат: "..Catalog.exhibits[index+1].title)
+   end
+  end
   event:FireClient(p,"Exhibit",Catalog.public(exhibit))
   state(p)
  end)
@@ -148,7 +179,10 @@ local function exitPost(name,offset,title,position)
  local p=part(name,Vector3.new(7,4,5),CFrame.new(center+offset),violet)
  sign(p,title,cyan)
  prompt(p,"Перейти",title,function(player)
-  if nearby(player,p.Position,16) then warp(player,position) end
+  if nearby(player,p.Position,16) then
+   tours[player]=nil;sendTour(player)
+   warp(player,position)
+  end
  end)
 end
 exitPost("ToChess",Vector3.new(45,3,5),"ШАХМАТЫ",Catalog.routes.Chess.position)
@@ -167,7 +201,10 @@ local portal=part("SpiralGalleryPortal",Vector3.new(8,8,2),
  CFrame.new(entrance+Vector3.new(0,4,0)),cyan,false,Enum.Material.Neon)
 sign(portal,"ГАЛЕРЕЯ СЮЖЕТА ИКС",gold)
 prompt(portal,"Войти","Story X Gallery",function(p)
- if nearby(p,portal.Position,16) then warp(p,center+Vector3.new(0,5,-12)) end
+ if nearby(p,portal.Position,16) then
+  warp(p,center+Vector3.new(0,5,-12))
+  sendTour(p,"Начни экскурсию у центральной голограммы.")
+ end
 end)
 exitPost("ToSpiral",Vector3.new(0,3,-19),"НА СПИРАЛЬ",entrance+Vector3.new(0,5,0))
 event.OnServerEvent:Connect(function(p,action,id,answer)
@@ -176,7 +213,10 @@ event.OnServerEvent:Connect(function(p,action,id,answer)
  if now-(lastAction[p] or -100)<0.3 then return end
  lastAction[p]=now
  if action=="Status" then
-  if nearby(p,center,110) then state(p) end
+  if nearby(p,center,110) then state(p);sendTour(p) end
+ elseif action=="StopTour" then
+  tours[p]=nil
+  sendTour(p,"Экскурсия остановлена. Продолжить можно у сферы в центре.")
  elseif action=="Answer" then
   if type(id)~="string" or type(answer)~="number" then return end
   local pos=locations[id]
@@ -239,7 +279,7 @@ Players.PlayerAdded:Connect(function(p)
 end)
 Players.PlayerRemoving:Connect(function(p)
  flush(p)
- focused[p]=nil;lastAction[p]=nil;seen[p]=nil;solved[p]=nil
+ focused[p]=nil;lastAction[p]=nil;seen[p]=nil;solved[p]=nil;tours[p]=nil
  persisted[p]=nil;saving[p]=nil
 end)
 for _,p in ipairs(Players:GetPlayers()) do
