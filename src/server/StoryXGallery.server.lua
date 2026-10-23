@@ -63,6 +63,42 @@ sculpture.Shape=Enum.PartType.Ball;sculpture.Transparency=0.4
 local core=part("ObserverCore",Vector3.new(4,4,4),CFrame.new(center+Vector3.new(0,8,0)),gold,false,Enum.Material.Neon)
 core.Shape=Enum.PartType.Ball
 sign(core,"YUGATNEO / STORY X",cyan)
+-- Recognizable 15x9 icon language: an eye, two observers, a trace spiral,
+-- circuit network, TV, film, archive clock, matrix code, two subjects and X.
+local function lit(index,x,y)
+ local dx,dy=x-8,y-5
+ local radius=math.sqrt(dx*dx+dy*dy)
+ if index==1 then
+  return math.abs(dx)*0.12+math.abs(dy)*0.43<1.6
+     and (math.abs(dy)>=1 or math.abs(dx)<=1)
+ elseif index==2 then
+  return ((x-4)^2+(y-4)^2<=4) or ((x-12)^2+(y-4)^2<=4)
+     or (y>=6 and (x>=2 and x<=6 or x>=10 and x<=14))
+ elseif index==3 then
+  local theta=math.atan2(dy,dx)
+  return math.abs(radius-(theta+3.2)*0.78)<0.8
+ elseif index==4 then
+  return ((x==4 or x==8 or x==12) and y>=2 and y<=8)
+    or ((y==3 or y==7) and x>=2 and x<=14)
+ elseif index==5 then
+  return (x>=3 and x<=13 and (y==3 or y==8))
+    or ((x==3 or x==13) and y>=3 and y<=8)
+    or (y==2 and (x==6 or x==10))
+ elseif index==6 then
+  return (y==2 or y==8) or ((x==3 or x==6 or x==9 or x==12) and y%3==0)
+    or (x>=4 and x<=11 and y>=4 and y<=6 and (x+y)%3==0)
+ elseif index==7 then
+  return (math.abs(radius-3.5)<0.65) or (x==8 and y>=3 and y<=5)
+    or (y==5 and x>=8 and x<=11)
+ elseif index==8 then
+  return (x%3==1 and (y+x)%3~=0) or (y==5 and x>=4 and x<=12)
+ elseif index==9 then
+  return ((x-5)^2+(y-3)^2<=2) or ((x-11)^2+(y-3)^2<=2)
+    or (y>=5 and (x>=3 and x<=7 or x>=9 and x<=13))
+ end
+ return math.abs(dx-dy)<=0.6 or math.abs(dx+dy)<=0.6
+end
+
 local function art(frame,exhibit,index)
  local g=Instance.new("SurfaceGui");g.Face=Enum.NormalId.Front
  g.PixelsPerStud=25;g.Parent=frame
@@ -76,9 +112,7 @@ local function art(frame,exhibit,index)
  end
  local tint=palette[exhibit.accent] or cyan
  for y=1,9 do for x=1,15 do
-  local dx=x-8;local dy=y-5
-  local on=((dx*dx+dy*dy+index*7)%13<4) or
-   (index%2==0 and (x+y+index)%6==0) or (index%2==1 and math.abs(dx)==math.abs(dy))
+  local on=lit(index,x,y)
   if on then
    local px=Instance.new("Frame")
    px.Position=UDim2.fromScale((x-1)/15,(y-1)/9)
