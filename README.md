@@ -6,7 +6,7 @@
 
 **[Техническое задание: трёхвитковый YUGATNEO MATRIX и портал в шахматы](docs/NEXT_STEP_SPIRAL_HUB_MVP.md)**.
 
-До работ над Hub требуется испытать Chess Arena v0.2 в Roblox Studio (Server + 2 Players). Следом создать **отдельный Rojo build target `hub.project.json`**, проходимый трёхвитковый серпантин с Осью Икс и голограммой, честно обозначенные будущие миры и **один безопасный серверный портал Hub → Chess → Hub**. Реальный переход нужно проверять в опубликованной тестовой Roblox Experience; простой `rojo build` не доказывает работу телепортации. **HUB-001 ещё не реализован.**
+**Первое действие — аудит уже существующего [PR #12](https://github.com/Yugatn/-YUGATNEO_Roblax/pull/12)**: в его незалитой ветке имеется трёхвитковая спираль, шахматные столы, библиотека и игры. Также пересекаются [PR #10](https://github.com/Yugatn/-YUGATNEO_Roblax/pull/10), [#11](https://github.com/Yugatn/-YUGATNEO_Roblax/pull/11), [#16](https://github.com/Yugatn/-YUGATNEO_Roblax/pull/16), [#17](https://github.com/Yugatn/-YUGATNEO_Roblax/pull/17). Не дублировать готовые скрипты; сверить с текущими шахматами v0.2 в `main` и проверить Roblox Studio. Затем интегрировать исправленные компоненты либо создать отдельный `hub.project.json`, если это оправдано тестами. Цель — трёхвитковый Hub с Осью Икс, голограммой и **безопасным порталом Hub ↔ Chess**. Меж-place телепорт проверяется в опубликованной тестовой Roblox Experience, не в Studio. **В `main` интегрированного Hub пока нет.**
 
 
 ## <u>Миры и измерения, которые мы задумали</u>
