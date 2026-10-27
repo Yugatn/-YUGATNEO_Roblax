@@ -1,33 +1,64 @@
-# YUGATNEO Roblox — Chess Arena
+# YUGATNEO MATRIX · «Сюжет Икс» — мультивселенная Roblox
 
-A Roblox Studio chess prototype for the YUGATNEO world.
+**Статус:** проектирование большой игровой вселенной и исходный шахматный прототип v0.2. **Миры пока не опубликованы на Roblox как единая мультивселенная**; игровое поведение в Roblox Studio требует проверки. GitHub хранит исходники, а не автоматически запускает Studio.
 
-## Included
-- Automatically generated 8×8 chessboard and 32 starting pieces.
-- Distinct piece silhouettes plus a letter badge: P (pawn), R (rook), N (knight), B (bishop), Q (queen), K (king).
-- Click a piece, then click a destination square to move it.
-- Turn-based play for White and Black.
-- Captures and basic movement rules for all six piece types.
-- On-screen controls: instructions, cancel selection, and reset/new game.
-- Server-side move validation for basic piece movement.
+## <u>Миры и измерения, которые мы задумали</u>
 
-## Prototype limitations
-This is not yet a complete tournament chess implementation. Check/checkmate validation, castling, en passant, pawn promotion, separate simultaneous matches, matchmaking, persistent ratings, and spectator tools are not implemented yet. The reset button restarts the shared board for everyone in the server.
+**[Читать подробный Атлас миров →](docs/WORLDS_ATLAS.md)**
 
-## Run in Roblox Studio (manual setup)
-1. Open Roblox Studio and create a **Baseplate** experience.
-2. In **ServerScriptService**, create a **Script** named `ChessArena`; paste in `src/server/ChessArena.server.lua`.
-3. In **StarterPlayer > StarterPlayerScripts**, create a **LocalScript** named `ChessControls`; paste in `src/client/ChessControls.client.lua`.
-4. Press **Play**. The server generates the board and pieces, and the client script adds the control panel.
+Мультивселенная строится вокруг **трёхвитковой спирали YUGATNEO MATRIX** с портальными измерениями и пространствами исследования. В атласе дана подробная проработка каждого мира: атмосфера, архитектура локации, сюжет, задания, игровые правила, цели, взаимодействие игроков и маршрут между пространствами.
 
-Both scripts are required for the on-screen controls. If you only install the server script, the board and pieces will appear but the control panel will not.
+| № | Мир / игровой режим | Ключевой опыт |
+| --- | --- | --- |
+| 00 | **Рождение Вселенной** | Деление клетки, становление мира и первая смена перспективы |
+| 01 | **YUGATNEO MATRIX** | Неоновый город, трёхвитковый серпантин, башни данных, Ось Икс, порталы |
+| 02 | **Chess Arena** | Шахматы 1v1, зрители, очередь, три доски, турниры — полная версия в плане |
+| 03 | **Matrix-код → Зион** | Телефонная будка → цифровой путь A–B → пробуждение → Зион |
+| 04 | **Oblivion** | Орбитальная станция Джека, космолёт, ремонт дронов, облака, ТЭТ |
+| 05 | **Neon Grid** | Световые байки, цифровые гоночные трассы |
+| 06 | **METAL SENTINELS** | Кооперативная оборона от роботизированных волн 1–4 игроками, три уровня |
+| 07 | **Библиотека Икс** | Чтение, поиск, конспекты, исследование памяти и идей |
+| 08 | **Когнитивный лабиринт** | Логика, ассоциации, восприятие, взгляд Другого |
+| 09 | **Ретро-аркада** | Оригинальные мини-игры в духе классических 16-битных автоматов |
+| 10 | **Игры движения** | Прятки, догонялки, казаки-разбойники |
+| 11 | **Настольный город** | Шашки и кооперативная экономическая симуляция |
+| 12 | **Город движения** | Машины, автотрек, безопасный тир по дронам |
+| 13 | **Музей и мастерская** | Галерея, художественные работы, крафт, достижения |
 
-## GitHub, Rojo, and publishing
-The `default.project.json` maps both scripts into Roblox services. For live sync, install Rojo and its Studio plugin, clone this repository locally, then run `rojo serve` and connect the plugin in Studio. GitHub changes reach Studio after you pull them into the local checkout; GitHub does not directly connect to your running Studio session.
+**Важно:** согласованные сюжетные опоры здесь отделены от предложенных реализационных деталей. Миры 00–01 и 03–13 в настоящее время представлены проектными описаниями; единственный частично исполняемый режим в текущем Rojo-проекте — шахматная арена. [Что реализовано и что ещё предстоит](docs/WORLD_IMPLEMENTATION_MATRIX.md).
 
-The GitHub Actions workflow `.github/workflows/roblox-ci.yml` builds the place on pushes and pull requests. It can also publish manually to Roblox when you run the workflow with publishing enabled and configure `ROBLOX_API_KEY`, `ROBLOX_UNIVERSE_ID`, and `ROBLOX_PLACE_ID` in GitHub Actions secrets. Publishing is intentionally manual by default. See [the full setup guide](docs/ROBLOX_GITHUB_SYNC.md).
+## Текущая игра: шахматная арена v0.2
 
-## Project files
-- `src/server/ChessArena.server.lua` — server-side board, piece generation, turn handling, captures, and basic move validation.
-- `src/client/ChessControls.client.lua` — on-screen buttons and player instructions.
-- `default.project.json` — Rojo project mapping.
+Уже есть создаваемая сервером шахматная доска 8×8, модели 32 фигур и клиентская панель управления. Добавлен независимый серверный модуль **ChessRules** с запретом оставлять своего короля под шахом, шахом, матом, патом и автоматическим превращением пешки в ферзя. Белая/чёрная сторона закрепляется за двумя игроками; зрители не могут управлять фигурами; сброс партии при двух игроках требует подтверждения обоих. Участникам показывается назначенная сторона.
+
+**Ограничения:** ещё нет рокировки, взятия на проходе, шахматных часов, выбора фигуры превращения, учёта повторений, сохранённого рейтинга, турнирной очереди и трёх отдельных столов. Поэтому это **не завершённые турнирные шахматы**. Сборка в GitHub CI не равна проверке корректности работы с двумя клиентами в Roblox Studio.
+
+## Как запустить в Roblox Studio
+
+1. Создай новый опыт **Baseplate** в Roblox Studio.
+2. В **ServerScriptService** создай **Script** `ChessArena` и вставь `src/server/ChessArena.server.lua`.
+3. В **ServerScriptService** создай **ModuleScript** `ChessRules` и вставь `src/server/ChessRules.lua`. **Без этого модуля новая шахматная арена не запустится.**
+4. В **StarterPlayer → StarterPlayerScripts** создай **LocalScript** `ChessControls` и вставь `src/client/ChessControls.client.lua`.
+5. Запусти тест **Server + 2 Players**. Первый получает белую сторону, второй — чёрную. Фигуры двигаются только разрешёнными пользователями.
+6. Модуль `src/server/CoopWaveDirector.lua` можно отдельно разместить под именем `CoopWaveDirector`, но он **не активирован**: без NPC-шаблона и контроллера волн оборона не запустится.
+
+### Через Rojo
+
+`default.project.json` содержит отображения серверного скрипта, двух ModuleScripts и клиентского LocalScript. После `git clone` / `git pull`, установки Rojo CLI и Roblox Studio plugin выполни `rojo serve` и подключись из Studio. Встроенный CI собирает `build.rbxlx`, но не публикует игру сам: публикация включается **вручную** и требует секретов Roblox Open Cloud. См. [инструкцию синхронизации](docs/ROBLOX_GITHUB_SYNC.md).
+
+## Правила игровых миров
+
+Игра предназначена для исследования, творчества, общения, интеллектуальных и безопасных кооперативных испытаний. Нет обязательных ставок, азартных механик с ценными предметами, платы за вход в мини-игры и наказаний физическими упражнениями. Знакомые кинематографические названия в проектных документах — **исторические референсы**, а не лицензия на использование чужих персонажей, визуальных ассетов, звука и логотипов. Для публичного релиза создаются оригинальные миры.
+
+## Документы и код
+
+- [Атлас 14 игровых миров](docs/WORLDS_ATLAS.md)
+- [Матрица реализации и реальные ограничения](docs/WORLD_IMPLEMENTATION_MATRIX.md)
+- [Связка GitHub — Roblox Studio — Rojo — публикация](docs/ROBLOX_GITHUB_SYNC.md)
+- [Серверный скрипт шахмат](src/server/ChessArena.server.lua)
+- [Серверные правила шахмат](src/server/ChessRules.lua)
+- [Клиентское управление шахматами](src/client/ChessControls.client.lua)
+- [Прототип кооперативных волн](src/server/CoopWaveDirector.lua)
+- [CI: Rojo Build и ручная публикация](.github/workflows/roblox-ci.yml)
+
+Автор концепции: **Югатн (Yugatn)**. Программный код — MIT согласно [LICENSE](LICENSE); права на сторонние медиа, товарные знаки, литературные тексты и авторскую символику не предоставляются данной лицензией.
