@@ -93,6 +93,8 @@ end
 
 local function broadcastSeats()
 	controlEvent:FireAllClients("Seats",
+		seats.White and seats.White.UserId or 0,
+		seats.Black and seats.Black.UserId or 0,
 		seats.White and seats.White.DisplayName or "Waiting",
 		seats.Black and seats.Black.DisplayName or "Waiting")
 end
@@ -433,7 +435,16 @@ end
 -- No spectator can reset an active game or deselect another player's piece.
 -- Both seats must consent to reset when both players are present.
 controlEvent.OnServerEvent:Connect(function(player, action)
-	if type(action) ~= "string" or not isNearBoard(player) then return end
+	if type(action) ~= "string" then return end
+	if action == "Sync" then
+		controlEvent:FireClient(player, "Seats",
+			seats.White and seats.White.UserId or 0,
+			seats.Black and seats.Black.UserId or 0,
+			seats.White and seats.White.DisplayName or "Waiting",
+			seats.Black and seats.Black.DisplayName or "Waiting")
+		return
+	end
+	if not isNearBoard(player) then return end
 	local side = sideOf(player)
 	if not side then return end
 	local now = os.clock()
