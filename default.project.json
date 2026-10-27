@@ -6,6 +6,12 @@
       "$className": "ServerScriptService",
       "ChessArena": {
         "$path": "src/server/ChessArena.server.lua"
+      },
+      "ChessRules": {
+        "$path": "src/server/ChessRules.lua"
+      },
+      "CoopWaveDirector": {
+        "$path": "src/server/CoopWaveDirector.lua"
       }
     },
     "StarterPlayer": {
