@@ -4,7 +4,7 @@
 
 ## Следующий шаг реализации — HUB-001
 
-**[Техническое задание: трёхвитковый YUGATNEO MATRIX и портал в шахматы](docs/NEXT_STEP_SPIRAL_HUB_MVP.md)**.
+**[Техническое задание HUB-001](docs/NEXT_STEP_SPIRAL_HUB_MVP.md)** · **[Задача GitHub #18 с приёмочными проверками](https://github.com/Yugatn/-YUGATNEO_Roblax/issues/18)**.
 
 **Первое действие — аудит уже существующего [PR #12](https://github.com/Yugatn/-YUGATNEO_Roblax/pull/12)**: в его незалитой ветке имеется трёхвитковая спираль, шахматные столы, библиотека и игры. Также пересекаются [PR #10](https://github.com/Yugatn/-YUGATNEO_Roblax/pull/10), [#11](https://github.com/Yugatn/-YUGATNEO_Roblax/pull/11), [#16](https://github.com/Yugatn/-YUGATNEO_Roblax/pull/16), [#17](https://github.com/Yugatn/-YUGATNEO_Roblax/pull/17). Не дублировать готовые скрипты; сверить с текущими шахматами v0.2 в `main` и проверить Roblox Studio. Затем интегрировать исправленные компоненты либо создать отдельный `hub.project.json`, если это оправдано тестами. Цель — трёхвитковый Hub с Осью Икс, голограммой и **безопасным порталом Hub ↔ Chess**. Меж-place телепорт проверяется в опубликованной тестовой Roblox Experience, не в Studio. **В `main` интегрированного Hub пока нет.**
 
