@@ -17,7 +17,7 @@ local panel = Instance.new("Frame")
 panel.Name = "ControlPanel"
 panel.AnchorPoint = Vector2.new(0, 0)
 panel.Position = UDim2.new(0, 18, 0, 18)
-panel.Size = UDim2.new(0, 250, 0, 178)
+panel.Size = UDim2.new(0, 270, 0, 236)
 panel.BackgroundColor3 = Color3.fromRGB(22, 27, 38)
 panel.BackgroundTransparency = 0.08
 panel.BorderSizePixel = 0
@@ -62,10 +62,35 @@ local helpButton = makeButton("HelpButton", "How to play", 42, Color3.fromRGB(52
 local deselectButton = makeButton("DeselectButton", "Cancel selection", 82, Color3.fromRGB(80, 86, 99))
 local resetButton = makeButton("ResetButton", "Start a new game", 122, Color3.fromRGB(153, 78, 53))
 
+local mySeat = Instance.new("TextLabel")
+mySeat.Name = "MySeat"
+mySeat.Position = UDim2.new(0, 12, 0, 164)
+mySeat.Size = UDim2.new(1, -24, 0, 25)
+mySeat.BackgroundTransparency = 1
+mySeat.TextColor3 = Color3.fromRGB(158, 229, 190)
+mySeat.TextXAlignment = Enum.TextXAlignment.Left
+mySeat.Font = Enum.Font.GothamSemibold
+mySeat.TextSize = 13
+mySeat.Text = "Checking seat..."
+mySeat.Parent = panel
+
+local gameStatus = Instance.new("TextLabel")
+gameStatus.Name = "GameStatus"
+gameStatus.Position = UDim2.new(0, 12, 0, 187)
+gameStatus.Size = UDim2.new(1, -24, 0, 36)
+gameStatus.BackgroundTransparency = 1
+gameStatus.TextColor3 = Color3.fromRGB(225, 230, 239)
+gameStatus.TextWrapped = true
+gameStatus.TextXAlignment = Enum.TextXAlignment.Left
+gameStatus.Font = Enum.Font.Gotham
+gameStatus.TextSize = 12
+gameStatus.Text = "Waiting for two players"
+gameStatus.Parent = panel
+
 local helpPanel = Instance.new("TextLabel")
 helpPanel.Name = "HelpText"
-helpPanel.Position = UDim2.new(0, 18, 0, 205)
-helpPanel.Size = UDim2.new(0, 310, 0, 148)
+helpPanel.Position = UDim2.new(0, 18, 0, 258)
+helpPanel.Size = UDim2.new(0, 320, 0, 232)
 helpPanel.BackgroundColor3 = Color3.fromRGB(22, 27, 38)
 helpPanel.BackgroundTransparency = 0.04
 helpPanel.BorderSizePixel = 0
@@ -75,7 +100,7 @@ helpPanel.TextXAlignment = Enum.TextXAlignment.Left
 helpPanel.TextYAlignment = Enum.TextYAlignment.Top
 helpPanel.Font = Enum.Font.Gotham
 helpPanel.TextSize = 14
-helpPanel.Text = "HOW TO PLAY\n1. Click one of your pieces.\n2. Click the destination square.\n3. White moves first, then Black.\n\nP pawn | R rook | N knight | B bishop | Q queen | K king\n\nPrototype note: check/checkmate and special moves are not implemented yet."
+helpPanel.Text = "HOW TO PLAY (v0.2)\n1. Wait for a White or Black seat.\n2. Click YOUR piece when it is your turn.\n3. Click the destination square.\n4. Both players must approve a restart.\n\nP pawn | R rook | N knight | B bishop | Q queen | K king\n\nServer validates check/checkmate and stalemate. Pawn automatically promotes to Queen. Castling, en passant and draw clocks are planned."
 helpPanel.Visible = false
 helpPanel.Parent = gui
 local helpCorner = Instance.new("UICorner")
@@ -94,3 +119,19 @@ end)
 resetButton.Activated:Connect(function()
 	controlEvent:FireServer("Reset")
 end)
+
+-- UI is observational; all chess permissions are checked on the server.
+controlEvent.OnClientEvent:Connect(function(kind, a, b, whiteName, blackName)
+	if kind == "Seats" then
+		if a == player.UserId then
+			mySeat.Text = "Your seat: White | Opponent: " .. tostring(blackName)
+		elseif b == player.UserId then
+			mySeat.Text = "Your seat: Black | Opponent: " .. tostring(whiteName)
+		else
+			mySeat.Text = "Spectating | waiting for an open seat"
+		end
+	elseif kind == "Status" then
+		gameStatus.Text = tostring(a)
+	end
+end)
+controlEvent:FireServer("Sync")
