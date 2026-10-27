@@ -22,8 +22,10 @@ GitHub alone cannot push changes into an already-open Studio session. For live e
 7. Edit/pull the files in the local repository. Rojo will sync supported changes into Studio while the server and plugin remain connected.
 
 The project mapping in default.project.json maps:
-- src/server/ChessArena.server.lua → ServerScriptService/ChessArena
-- src/client/ChessControls.client.lua → StarterPlayer/StarterPlayerScripts/ChessControls
+- src/server/ChessArena.server.lua → ServerScriptService/ChessArena (Script)
+- src/server/ChessRules.lua → ServerScriptService/ChessRules (ModuleScript, **required**)
+- src/server/CoopWaveDirector.lua → ServerScriptService/CoopWaveDirector (ModuleScript, **not started automatically**)
+- src/client/ChessControls.client.lua → StarterPlayer/StarterPlayerScripts/ChessControls (LocalScript)
 
 GitHub-to-Studio flow: first pull the latest commit to your local checkout (for example, git pull), then Rojo syncs those local files into the connected Studio session. A GitHub commit by itself does not connect to your computer.
 
@@ -58,7 +60,7 @@ The publish job sends the Rojo-built .rbxlx file to Roblox's Place Publishing AP
 
 ## D. Chess controls
 
-The existing client panel already sends Reset and Deselect actions to the server. Reset starts a new game on the shared board for everyone in that server; it is not a separate private match per player. The current chess implementation is a prototype and does not yet implement check/checkmate, castling, en passant, or pawn promotion.
+The existing client panel already sends Reset and Deselect actions to the server. Reset starts a new game on the shared board for everyone in that server; it is not a separate private match per player. The chess prototype v0.2 now implements server-side king safety, checkmate, stalemate, and automatic Queen promotion; it still does NOT implement castling, en passant, timers, selectable promotion, repeat-draw rules, three simultaneous boards or full tournaments. Two players are assigned seats on the server; spectators cannot move, and active-board reset requires both players to confirm. Always test in Studio with Server + 2 Players.
 
 ## Troubleshooting
 
@@ -66,3 +68,7 @@ The existing client panel already sends Reset and Deselect actions to the server
 - If rojo build fails in GitHub Actions, open the failed workflow and inspect the build step.
 - If publishing fails, verify all three secrets, the Place ID/Universe ID pairing, the API key's universe-places Write permission, and that the place is publishable.
 - Never paste your Roblox API key or account security cookie into chat or commit it to GitHub.
+
+## E. Atlas of future worlds
+
+See [**Detailed World Atlas**](WORLDS_ATLAS.md) and [**Implementation Matrix**](WORLD_IMPLEMENTATION_MATRIX.md). The currently mapped Rojo project builds only the Chess Arena and includes an inactive wave-director ModuleScript. The three-turn spiral hub, portal destinations, Matrix-code/Zion, Oblivion, Neon Grid, METAL SENTINELS, Library X, retro-arcade, racing, museum and social mini-games are **design documents**, not published Roblox Places. To convert them into playable Places, create explicit Rojo entries and server-controlled TeleportService paths only after Studio testing.
