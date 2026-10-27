@@ -1,8 +1,10 @@
 -- YUGATNEO Roblox Chess Arena
--- Prototype: legal piece movement and captures, but no check/checkmate,
--- castling, en passant, or pawn promotion yet.
+-- Chess Arena v0.2: server-verified turns, king safety, checkmate/stalemate,
+-- automatic queen promotion and double-confirmation reset.
+-- Still missing castling/en passant, draw rules, timers and ranked queues.
 
 local Players = game:GetService("Players")
+local ChessRules = require(script.Parent:WaitForChild("ChessRules"))
 
 local TILE = 4
 local BOARD_Y = 1
@@ -27,9 +29,12 @@ local piecesFolder = Instance.new("Folder")
 piecesFolder.Name = "Pieces"
 piecesFolder.Parent = arena
 
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local previousEvent = ReplicatedStorage:FindFirstChild("ChessControlEvent")
+if previousEvent then previousEvent:Destroy() end
 local controlEvent = Instance.new("RemoteEvent")
 controlEvent.Name = "ChessControlEvent"
-controlEvent.Parent = game:GetService("ReplicatedStorage")
+controlEvent.Parent = ReplicatedStorage
 
 local statusPart = Instance.new("Part")
 statusPart.Name = "GameStatusBoard"
@@ -57,6 +62,7 @@ statusLabel.Parent = surfaceGui
 
 local function setStatus(text)
 	statusLabel.Text = "YUGATNEO CHESS\n" .. text
+	controlEvent:FireAllClients("Status", text)
 end
 
 local tiles = {}
@@ -65,6 +71,39 @@ local currentTurn = "White"
 local selectedPiece = nil
 local selectedTile = nil
 local tryMove
+local selectedBy = nil
+local gameOver = false
+local seats = {White = nil, Black = nil}
+local waitingQueue = {}
+local resetVotes = {White = false, Black = false}
+local lastActionAt = {}
+
+local function sideOf(player)
+	if seats.White == player then return "White" end
+	if seats.Black == player then return "Black" end
+	return nil
+end
+
+local function isNearBoard(player)
+	if not player or player.Parent ~= Players then return false end
+	local character = player.Character
+	local root = character and character:FindFirstChild("HumanoidRootPart")
+	return root ~= nil and (root.Position - Vector3.new(0, 1, 0)).Magnitude <= 95
+end
+
+local function broadcastSeats()
+	controlEvent:FireAllClients("Seats",
+		seats.White and seats.White.DisplayName or "Waiting",
+		seats.Black and seats.Black.DisplayName or "Waiting")
+end
+
+local function resetVotesAndSelection()
+	resetVotes.White = false
+	resetVotes.Black = false
+	selectedBy = nil
+	selectedPiece = nil
+end
+
 
 local WHITE = Color3.fromRGB(238, 232, 218)
 local BLACK = Color3.fromRGB(65, 75, 91)
@@ -247,20 +286,24 @@ local function makePiece(pieceType, side, row, col)
 	occupancy[key(row, col)] = model
 
 	local function onPieceClicked(player)
+		if gameOver or not seats.White or not seats.Black
+			or sideOf(player) ~= currentTurn or not isNearBoard(player) then return end
 		local currentRow = model:GetAttribute("Row")
 		local currentCol = model:GetAttribute("Col")
 		if model.Parent and occupancy[key(currentRow, currentCol)] == model then
 			if model:GetAttribute("Side") == currentTurn then
 				if selectedPiece == model then
 					selectedPiece = nil
+					selectedBy = nil
 					setStatus(currentTurn .. " to move")
 				else
 					selectedPiece = model
+					selectedBy = player
 					setStatus(currentTurn .. " to move | Selected: " .. pieceType)
 				end
-			elseif selectedPiece then
+			elseif selectedPiece and selectedBy == player then
 				-- Clicking an opposing piece attempts to capture it on its square.
-				tryMove(currentRow, currentCol)
+				tryMove(currentRow, currentCol, player)
 			end
 		end
 	end
@@ -298,75 +341,34 @@ for row = 1, 8 do
 		click.MaxActivationDistance = 100
 		click.Parent = tile
 		click.MouseClick:Connect(function(player)
-			if selectedPiece then
-				tryMove(row, col)
+			if selectedPiece and selectedBy == player and sideOf(player) == currentTurn
+				and seats.White and seats.Black and not gameOver and isNearBoard(player) then
+				tryMove(row, col, player)
 			end
 		end)
 	end
 end
 
-local function pathIsClear(fromRow, fromCol, toRow, toCol)
-	local rowStep = toRow == fromRow and 0 or (toRow > fromRow and 1 or -1)
-	local colStep = toCol == fromCol and 0 or (toCol > fromCol and 1 or -1)
-	local row = fromRow + rowStep
-	local col = fromCol + colStep
-	while row ~= toRow or col ~= toCol do
-		if occupancy[key(row, col)] then
-			return false
-		end
-		row += rowStep
-		col += colStep
-	end
-	return true
-end
-
+-- Authoritative chess state is built on the server; clients only click intent.
 local function isValidMove(piece, toRow, toCol)
-	if not piece or not piece.Parent or not inside(toRow, toCol) then
-		return false
-	end
+	if not piece or not piece.Parent then return false end
 	local fromRow = piece:GetAttribute("Row")
 	local fromCol = piece:GetAttribute("Col")
-	local pieceType = piece:GetAttribute("PieceType")
-	local side = piece:GetAttribute("Side")
-	local dr = toRow - fromRow
-	local dc = toCol - fromCol
-	if dr == 0 and dc == 0 then return false end
-
-	local target = occupancy[key(toRow, toCol)]
-	if target and target:GetAttribute("Side") == side then return false end
-
-	if pieceType == "Pawn" then
-		local direction = side == "White" and 1 or -1
-		local startRow = side == "White" and 2 or 7
-		if dc == 0 and dr == direction and not target then return true end
-		if dc == 0 and dr == 2 * direction and fromRow == startRow and not target
-			and not occupancy[key(fromRow + direction, fromCol)] then return true end
-		if math.abs(dc) == 1 and dr == direction and target then return true end
-		return false
-	elseif pieceType == "Knight" then
-		return (math.abs(dr) == 2 and math.abs(dc) == 1) or (math.abs(dr) == 1 and math.abs(dc) == 2)
-	elseif pieceType == "King" then
-		return math.max(math.abs(dr), math.abs(dc)) == 1
-	elseif pieceType == "Bishop" then
-		return math.abs(dr) == math.abs(dc) and pathIsClear(fromRow, fromCol, toRow, toCol)
-	elseif pieceType == "Rook" then
-		return (dr == 0 or dc == 0) and pathIsClear(fromRow, fromCol, toRow, toCol)
-	elseif pieceType == "Queen" then
-		local straight = dr == 0 or dc == 0
-		local diagonal = math.abs(dr) == math.abs(dc)
-		return (straight or diagonal) and pathIsClear(fromRow, fromCol, toRow, toCol)
-	end
-	return false
+	return ChessRules.isLegalMove(
+		ChessRules.snapshot(occupancy), fromRow, fromCol, toRow, toCol
+	)
 end
 
-tryMove = function(toRow, toCol)
+tryMove = function(toRow, toCol, player)
+	if gameOver or not seats.White or not seats.Black or not isNearBoard(player)
+		or sideOf(player) ~= currentTurn or selectedBy ~= player then return end
 	if not selectedPiece or not selectedPiece.Parent then
-		selectedPiece = nil
+		resetVotesAndSelection()
 		return
 	end
 	local piece = selectedPiece
 	if piece:GetAttribute("Side") ~= currentTurn then
-		selectedPiece = nil
+		resetVotesAndSelection()
 		return
 	end
 	if not isValidMove(piece, toRow, toCol) then
@@ -386,9 +388,29 @@ tryMove = function(toRow, toCol)
 	piece:SetAttribute("Row", toRow)
 	piece:SetAttribute("Col", toCol)
 	piece:PivotTo(CFrame.new(squarePosition(toRow, toCol, PIECE_Y)) * CFrame.Angles(0, 0, math.rad(90)))
-	selectedPiece = nil
+	-- Queen promotion in v0.2. Player-selectable underpromotion is future work.
+	if piece:GetAttribute("PieceType") == "Pawn"
+		and (toRow == 8 or toRow == 1) then
+		local promotedSide = piece:GetAttribute("Side")
+		occupancy[key(toRow, toCol)] = nil
+		piece:Destroy()
+		makePiece("Queen", promotedSide, toRow, toCol)
+	end
+	resetVotesAndSelection()
 	currentTurn = currentTurn == "White" and "Black" or "White"
-	setStatus(currentTurn .. " to move")
+	local state = ChessRules.analyze(ChessRules.snapshot(occupancy), currentTurn)
+	if state == "Checkmate" then
+		gameOver = true
+		local winner = currentTurn == "White" and "Black" or "White"
+		setStatus("CHECKMATE | " .. winner .. " wins")
+	elseif state == "Stalemate" then
+		gameOver = true
+		setStatus("STALEMATE | Draw")
+	elseif state == "Check" then
+		setStatus(currentTurn .. " to move | CHECK")
+	else
+		setStatus(currentTurn .. " to move")
+	end
 end
 
 local backRank = {"Rook", "Knight", "Bishop", "Queen", "King", "Bishop", "Knight", "Rook"}
@@ -396,7 +418,8 @@ local backRank = {"Rook", "Knight", "Bishop", "Queen", "King", "Bishop", "Knight
 local function resetGame()
 	piecesFolder:ClearAllChildren()
 	table.clear(occupancy)
-	selectedPiece = nil
+	resetVotesAndSelection()
+	gameOver = false
 	currentTurn = "White"
 	for col = 1, 8 do
 		makePiece(backRank[col], "White", 1, col)
@@ -407,14 +430,72 @@ local function resetGame()
 	setStatus("White to move | New game")
 end
 
+-- No spectator can reset an active game or deselect another player's piece.
+-- Both seats must consent to reset when both players are present.
 controlEvent.OnServerEvent:Connect(function(player, action)
+	if type(action) ~= "string" or not isNearBoard(player) then return end
+	local side = sideOf(player)
+	if not side then return end
+	local now = os.clock()
+	if lastActionAt[player] and now - lastActionAt[player] < 0.25 then return end
+	lastActionAt[player] = now
+
 	if action == "Reset" then
-		resetGame()
-	elseif action == "Deselect" then
+		if not seats.White or not seats.Black then
+			resetGame()
+			return
+		end
+		resetVotes[side] = true
+		if resetVotes.White and resetVotes.Black then
+			resetGame()
+		else
+			setStatus("New game requested by " .. side .. " | both seats must approve")
+		end
+	elseif action == "Deselect" and selectedBy == player then
+		selectedBy = nil
 		selectedPiece = nil
 		setStatus(currentTurn .. " to move")
 	end
 end)
+
+local function assignSeats()
+	for _, side in ipairs({"White", "Black"}) do
+		if seats[side] == nil and #waitingQueue > 0 then
+			seats[side] = table.remove(waitingQueue, 1)
+		end
+	end
+	broadcastSeats()
+end
+
+local function join(player)
+	table.insert(waitingQueue, player)
+	assignSeats()
+	if not seats.White or not seats.Black then
+		setStatus("Waiting for two players | spectators cannot move")
+	end
+end
+
+Players.PlayerAdded:Connect(join)
+Players.PlayerRemoving:Connect(function(player)
+	lastActionAt[player] = nil
+	for i = #waitingQueue, 1, -1 do
+		if waitingQueue[i] == player then table.remove(waitingQueue, i) end
+	end
+	local vacated = false
+	for _, side in ipairs({"White", "Black"}) do
+		if seats[side] == player then
+			seats[side] = nil
+			vacated = true
+		end
+	end
+	if vacated then
+		assignSeats()
+		resetGame()
+	end
+end)
+for _, player in ipairs(Players:GetPlayers()) do
+	join(player)
+end
 
 resetGame()
 
@@ -428,5 +509,10 @@ floor.Material = Enum.Material.Slate
 floor.Color = Color3.fromRGB(28, 32, 42)
 floor.Parent = arena
 
-setStatus("White to move")
-print("YUGATNEO Chess Arena loaded: board, labelled pieces, and game controls created.")
+if seats.White and seats.Black then
+	setStatus("White to move")
+else
+	setStatus("Waiting for two players")
+end
+broadcastSeats()
+print("YUGATNEO Chess Arena v0.2: server-side roles and king safety active.")
