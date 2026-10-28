@@ -130,15 +130,21 @@ local function portal(name, pos, label, destination)
     prompt.Parent = p
     local lastUse = {}
     prompt.Triggered:Connect(function(player)
+        -- A client can imitate prompt interactions. Re-check proximity on the server.
+        if not player or player.Parent ~= Players or not prompt.Enabled or not p.Parent then return end
+        local character = player.Character
+        local root = character and character:FindFirstChild("HumanoidRootPart")
+        local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+        if not root or not humanoid or humanoid.Health <= 0 then return end
+        if root.Anchored or (root.Position - p.Position).Magnitude > prompt.MaxActivationDistance + 3 then
+            return
+        end
         local time = os.clock()
         if time - (lastUse[player.UserId] or -100) < 2 then return end
         lastUse[player.UserId] = time
-        local character = player.Character
-        local root = character and character:FindFirstChild("HumanoidRootPart")
-        if root then
-            root.AssemblyLinearVelocity = Vector3.zero
-            root.CFrame = CFrame.new(destination)
-        end
+        root.AssemblyLinearVelocity = Vector3.zero
+        root.AssemblyAngularVelocity = Vector3.zero
+        character:PivotTo(CFrame.new(destination))
     end)
     Players.PlayerRemoving:Connect(function(player) lastUse[player.UserId] = nil end)
 end
