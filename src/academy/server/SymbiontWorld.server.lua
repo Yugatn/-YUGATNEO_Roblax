@@ -27,6 +27,7 @@ getState.Parent = remotes
 local state = Rules.newState()
 local lastPromptAt = {}
 local actionBoards = {}
+local sceneFeedback = {}
 
 getState.OnServerInvoke = function(_player)
     return Rules.snapshot(state)
@@ -120,6 +121,15 @@ local function renderState(levelId)
         local action = Content.levels[levelId].actions[actionId]
         record.prompt.Enabled = not completed and not (action.group and progress.selected ~= nil)
     end
+    -- The visible environment responds to completed tasks, not only to text.
+    for actionId, objects in pairs(sceneFeedback[levelId] or {}) do
+        for _, object in ipairs(objects) do
+            local active = progress.done[actionId] == true
+            object.Transparency = if active then 0.04 else 0.76
+            object.Material = if active then Enum.Material.Neon else Enum.Material.SmoothPlastic
+            object.CanCollide = false
+        end
+    end
 end
 
 local function interact(player, prompt, levelId, actionId)
@@ -158,22 +168,35 @@ for _, levelId in ipairs(Content.order) do
     local monument = makePart("MissionMonument", Vector3.new(14, 9, 3), center + Vector3.new(0, 4.5, -39), level.color, Enum.Material.Metal, zone)
     labelOn(monument, level.title .. "  ·  " .. level.ageHint, ground, Vector3.new(0, 10, 0), 380)
 
-    -- Decorative original geometry with no third-party assets or physics hazards.
+    -- Geometry communicates progress but never replaces the server-side checks.
+    sceneFeedback[levelId] = {}
     if levelId == "water" then
         local tank = makePart("WaterTank", Vector3.new(12, 12, 12), center + Vector3.new(-37, 7, -10), level.color, Enum.Material.Glass, zone)
         tank.Shape = Enum.PartType.Ball
-        for _, dx in ipairs({-19, 0, 19}) do
-            makePart("PipeNetwork", Vector3.new(3, 2, 24), center + Vector3.new(dx, 1, 27), Color3.fromRGB(77, 168, 205), Enum.Material.Metal, zone)
+        sceneFeedback[levelId].activate = {tank}
+        local districts = {"clinic", "school", "homes"}
+        for index, dx in ipairs({-19, 0, 19}) do
+            local pipe = makePart("PipeNetwork_" .. districts[index], Vector3.new(3, 2, 24),
+                center + Vector3.new(dx, 1, 27), Color3.fromRGB(77, 168, 205), Enum.Material.Metal, zone)
+            sceneFeedback[levelId][districts[index]] = {pipe}
         end
     elseif levelId == "bridge" then
         makePart("River", Vector3.new(70, 0.3, 12), center + Vector3.new(0, 0.3, -21), Color3.fromRGB(48, 120, 205), Enum.Material.Glass, zone)
-        makePart("BridgeModel", Vector3.new(18, 1.2, 16), center + Vector3.new(0, 2, -21), Color3.fromRGB(210, 162, 98), Enum.Material.WoodPlanks, zone)
-        for _, dx in ipairs({-10, 10}) do
-            makePart("Railing", Vector3.new(1, 3, 18), center + Vector3.new(dx, 3.5, -21), Color3.fromRGB(226, 205, 162), Enum.Material.Wood, zone)
+        local deck = makePart("BridgeModel", Vector3.new(18, 1.2, 16),
+            center + Vector3.new(0, 2, -21), Color3.fromRGB(210, 162, 98), Enum.Material.WoodPlanks, zone)
+        sceneFeedback[levelId].open = {deck}
+        local supports = {"beamLeft", "beamRight"}
+        for index, dx in ipairs({-10, 10}) do
+            local beam = makePart("Railing_" .. supports[index], Vector3.new(1, 3, 18),
+                center + Vector3.new(dx, 3.5, -21), Color3.fromRGB(226, 205, 162), Enum.Material.Wood, zone)
+            sceneFeedback[levelId][supports[index]] = {beam}
         end
     else
-        for _, dx in ipairs({-25, 0, 25}) do
-            makePart("ForumColumn", Vector3.new(4, 12, 4), center + Vector3.new(dx, 6, -15), level.color, Enum.Material.Marble, zone)
+        local sources = {"budget", "residents", "engineers"}
+        for index, dx in ipairs({-25, 0, 25}) do
+            local column = makePart("ForumColumn_" .. sources[index], Vector3.new(4, 12, 4),
+                center + Vector3.new(dx, 6, -15), level.color, Enum.Material.Marble, zone)
+            sceneFeedback[levelId][sources[index]] = {column}
         end
         makePart("MeetingTable", Vector3.new(28, 2, 8), center + Vector3.new(0, 3, -12), Color3.fromRGB(98, 79, 141), Enum.Material.Wood, zone)
     end
@@ -209,6 +232,7 @@ for _, levelId in ipairs(Content.order) do
             interact(player, prompt, levelId, actionId)
         end)
     end
+    renderState(levelId)
 end
 
 local spawn = Instance.new("SpawnLocation")
