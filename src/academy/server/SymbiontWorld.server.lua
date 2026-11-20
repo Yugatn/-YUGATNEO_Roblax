@@ -178,6 +178,22 @@ for _, levelId in ipairs(Content.order) do
         makePart("MeetingTable", Vector3.new(28, 2, 8), center + Vector3.new(0, 3, -12), Color3.fromRGB(98, 79, 141), Enum.Material.Wood, zone)
     end
 
+    -- A visible return point lets solo and mobile players explore without getting lost.
+    local backPad = makePart("ReturnToLobby", Vector3.new(13, 1, 10),
+        center + Vector3.new(38, 0.8, -36), Color3.fromRGB(225, 176, 95), Enum.Material.Neon, zone)
+    labelOn(backPad, "Вернуться в центр", ground, Vector3.new(0, 5, 0), 230)
+    local backPrompt = makePrompt(backPad, "Вернуться", "Главная площадь", 0.1)
+    backPrompt.Triggered:Connect(function(player)
+        if not near(player, backPad, backPrompt.MaxActivationDistance + 3) or throttled(player) then
+            return
+        end
+        local character = player.Character
+        if character then
+            character:PivotTo(CFrame.new(0, 5, -82))
+            notify(player, "Ты вернулся на центральную площадь.")
+        end
+    end)
+
     actionBoards[levelId] = {}
     for index, actionId in ipairs(level.order) do
         local action = level.actions[actionId]
@@ -206,6 +222,7 @@ spawn.Material = Enum.Material.Neon
 spawn.Color = Color3.fromRGB(224, 179, 91)
 spawn.Parent = folder
 labelOn(spawn, "СИМБИОНТ: АКАДЕМИЯ\nИсследуй, помогай, проверяй", ground, Vector3.new(0, 7, 0), 430)
+makePart("LobbyPlaza", Vector3.new(83, 1.5, 40), Vector3.new(0, -0.75, -65), ground, Enum.Material.Slate, folder)
 makePart("LobbyPath", Vector3.new(16, 0.3, 35), Vector3.new(0, 0.25, -61), trim, Enum.Material.SmoothPlastic, folder)
 
 for index, levelId in ipairs(Content.order) do
