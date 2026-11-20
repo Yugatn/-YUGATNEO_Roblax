@@ -1,0 +1,48 @@
+name: Symbiont Academy checks
+
+on:
+  push:
+    branches: [main, feature/symbiont-academy-roblox-mvp-20261120]
+    paths:
+      - academy.project.json
+      - src/academy/**
+      - tests/test_symbiont_academy_static.py
+      - tools/validate_rojo_manifest.py
+      - .github/workflows/symbiont-academy-ci.yml
+  pull_request:
+    branches: [main]
+    paths:
+      - academy.project.json
+      - src/academy/**
+      - tests/test_symbiont_academy_static.py
+      - tools/validate_rojo_manifest.py
+      - .github/workflows/symbiont-academy-ci.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  academy-build:
+    name: Validate and build separate Academy Place
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Validate both independent Rojo projects and run static tests
+        run: |
+          python3 tools/validate_rojo_manifest.py default.project.json academy.project.json
+          python3 -m unittest discover -s tests -p 'test_*.py' -v
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+      - name: Install Rojo CLI
+        run: cargo install rojo --locked
+      - name: Build Academy Place (no publishing)
+        run: rojo build academy.project.json -o symbiont-academy.rbxlx
+      - name: Upload Studio-compatible place
+        uses: actions/upload-artifact@v4
+        with:
+          name: symbiont-academy-rbxlx
+          path: symbiont-academy.rbxlx
+          if-no-files-found: error
+          retention-days: 14
