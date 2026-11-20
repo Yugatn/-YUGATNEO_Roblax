@@ -131,6 +131,28 @@ local function draw()
     end
     levelTitle.Text = level.title .. "  ·  " .. level.ageHint ..
         (if progress.completed then "  ·  ПРОЙДЕНО" else "")
+    local hint = "Подойди к одному из игровых стендов и нажми E или экранную кнопку."
+    if progress.completed then
+        hint = "Задание выполнено. Можно перейти к другой зоне."
+    else
+        for _, actionId in ipairs(level.order) do
+            local action = level.actions[actionId]
+            if not progress.done[actionId] and not (action.group and progress.selected) then
+                local ready = true
+                for _, dependency in ipairs(action.requires) do
+                    if not progress.done[dependency] then
+                        ready = false
+                        break
+                    end
+                end
+                if ready then
+                    hint = action.hint
+                    break
+                end
+            end
+        end
+    end
+    subtitle.Text = hint
     description.Text = level.description
     checklist.Text = table.concat(rows, "\n")
     reflection.Text = "Подумай: " .. level.reflection
