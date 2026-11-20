@@ -1,0 +1,33 @@
+{
+  "name": "Symbiont_Academy",
+  "tree": {
+    "$className": "DataModel",
+    "ReplicatedStorage": {
+      "$className": "ReplicatedStorage",
+      "SymbiontShared": {
+        "$className": "Folder",
+        "AcademyContent": {
+          "$path": "src/academy/shared/AcademyContent.lua"
+        }
+      }
+    },
+    "ServerScriptService": {
+      "$className": "ServerScriptService",
+      "SymbiontRules": {
+        "$path": "src/academy/server/SymbiontRules.lua"
+      },
+      "SymbiontWorld": {
+        "$path": "src/academy/server/SymbiontWorld.server.lua"
+      }
+    },
+    "StarterPlayer": {
+      "$className": "StarterPlayer",
+      "StarterPlayerScripts": {
+        "$className": "StarterPlayerScripts",
+        "SymbiontHUD": {
+          "$path": "src/academy/client/SymbiontHUD.client.lua"
+        }
+      }
+    }
+  }
+}
