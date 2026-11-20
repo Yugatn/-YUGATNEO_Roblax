@@ -18,6 +18,9 @@
       },
       "SymbiontWorld": {
         "$path": "src/academy/server/SymbiontWorld.server.lua"
+      },
+      "SymbiontRooms": {
+        "$path": "src/academy/server/SymbiontRooms.lua"
       }
     },
     "StarterPlayer": {
