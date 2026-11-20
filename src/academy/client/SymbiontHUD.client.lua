@@ -98,15 +98,16 @@ local tabButtons = {}
 local function updateSize()
     local camera = Workspace.CurrentCamera
     local viewport = if camera then camera.ViewportSize else Vector2.new(900, 700)
-    local width = math.clamp(viewport.X - 24, 260, 440)
-    local height = math.clamp(viewport.Y - 95, 295, 472)
+    local width = math.clamp(viewport.X - 24, 220, 440)
+    local height = math.clamp(viewport.Y - 95, 275, 472)
     panel.Size = UDim2.fromOffset(width, if collapsed then 52 else height)
     local compact = not collapsed and height < 420
     description.Visible = not compact
     reflection.Visible = not compact
-    checklist.Position = UDim2.new(0, 16, 0, if compact then 167 else 225)
-    checklist.Size = UDim2.new(1, -32, 0, if compact then 92 else 137)
-    message.Position = UDim2.new(0, 16, 0, if compact then 271 else 413)
+    checklist.Position = UDim2.new(0, 16, 0, if compact then 166 else 225)
+    checklist.Size = UDim2.new(1, -32, 0, if compact then math.max(52, height - 222) else 137)
+    checklist.TextSize = if compact then 12 else 14
+    message.Position = UDim2.new(0, 16, 0, if compact then height - 51 else 413)
     message.Size = UDim2.new(1, -32, 0, if compact then 46 else 50)
 end
 
@@ -161,7 +162,19 @@ local function draw()
     else
         subtitle.Text = hint
         description.Text = level.description
-        checklist.Text = table.concat(rows, "\n")
+        if panel.AbsoluteSize.Y > 0 and panel.AbsoluteSize.Y < 420 and not collapsed then
+            local nextStep = "Задания выполнены!"
+            for _, actionId in ipairs(level.order) do
+                if not progress.done[actionId] then
+                    nextStep = level.actions[actionId].label
+                    break
+                end
+            end
+            checklist.Text = "Готово: " .. tostring(count) .. "/" .. tostring(#level.order) ..
+                "\nСледующая задача: " .. nextStep
+        else
+            checklist.Text = table.concat(rows, "\n")
+        end
         reflection.Text = "Подумай: " .. level.reflection
         local role = if latest.isLeader then " · организатор" else ""
         message.Text = "Команда " .. tostring(latest.roomId) .. role .. " · " ..
