@@ -90,7 +90,7 @@ foldRound.CornerRadius = UDim.new(0, 8)
 foldRound.Parent = fold
 
 local selectedLevel = Content.order[1]
-local latest = {revision = -1, levels = {}}
+local latest = {serverSeq = -1, roomId = 0, revision = 0, levels = {}, members = 0, maxMembers = 4, isLeader = false}
 local feedback = "Начни с любой зоны. Работать можно совместно."
 local collapsed = false
 local tabButtons = {}
@@ -129,8 +129,8 @@ local function draw()
             "[✓] Выбран мирный путь решения",
             "Выбор не единственный: у разных решений есть ограничения."}
     end
-    levelTitle.Text = level.title .. "  ·  " .. level.ageHint ..
-        (if progress.completed then "  ·  ПРОЙДЕНО" else "")
+    levelTitle.Text = if latest.roomId == 0 then "Выбери команду 1–4"
+        else level.title .. " · " .. level.ageHint .. (if progress.completed then " · ПРОЙДЕНО" else "")
     local hint = "Подойди к одному из игровых стендов и нажми E или экранную кнопку."
     if progress.completed then
         hint = "Задание выполнено. Можно перейти к другой зоне."
@@ -152,11 +152,22 @@ local function draw()
             end
         end
     end
-    subtitle.Text = hint
-    description.Text = level.description
-    checklist.Text = table.concat(rows, "\n")
-    reflection.Text = "Подумай: " .. level.reflection
-    message.Text = feedback .. "\nУчастников в эпизоде: " .. tostring(progress.contributors or 0)
+    if latest.roomId == 0 then
+        subtitle.Text = "Подойди к одному из четырёх стендов в общем холле."
+        description.Text = "Выбери свободную команду. С ней можно пройти три игры."
+        checklist.Text = "Сначала вступи в команду.\nЗатем выбирай задания внутри её игрового мира."
+        reflection.Text = "Совместная работа не требует одинаковых мнений."
+        message.Text = feedback
+    else
+        subtitle.Text = hint
+        description.Text = level.description
+        checklist.Text = table.concat(rows, "\n")
+        reflection.Text = "Подумай: " .. level.reflection
+        local role = if latest.isLeader then " · организатор" else ""
+        message.Text = "Команда " .. tostring(latest.roomId) .. role .. " · " ..
+            tostring(latest.members) .. "/" .. tostring(latest.maxMembers) ..
+            "\n" .. feedback
+    end
 
     for levelId, button in pairs(tabButtons) do
         local selected = levelId == selectedLevel
@@ -206,10 +217,14 @@ fold.MouseButton1Click:Connect(function()
 end)
 
 local function applySnapshot(snapshot, newMessage)
-    if typeof(snapshot) ~= "table" or typeof(snapshot.revision) ~= "number" or typeof(snapshot.levels) ~= "table" then
+    if typeof(snapshot) ~= "table" or typeof(snapshot.serverSeq) ~= "number"
+        or typeof(snapshot.roomId) ~= "number" or typeof(snapshot.levels) ~= "table" then
         return
     end
-    if snapshot.revision < latest.revision then return end
+    -- A global monotonically growing sequence also handles room changes and resets.
+    if snapshot.serverSeq < latest.serverSeq then
+        return
+    end
     latest = snapshot
     if typeof(newMessage) == "string" and #newMessage < 600 then
         feedback = newMessage
