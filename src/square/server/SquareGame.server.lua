@@ -238,9 +238,12 @@ local function scheduleAfterPenalty(offender)
 end
 
 local function contact(pointZone)
+    local hitter = state.lastHitter
+    local receiver = state.receiver
     local result = Rules.bounce(state, pointZone)
     if result == "fault" or result == "goal" then
-        scheduleAfterPenalty(state.receiver)
+        -- Own central/outside fault: last hitter serves next; missed return: receiver.
+        scheduleAfterPenalty(if result == "fault" then hitter else receiver)
     elseif result == "continue" then
         motion.t = 0
         motion.start = Vector3.new(ball.Position.X, groundY, ball.Position.Z)
