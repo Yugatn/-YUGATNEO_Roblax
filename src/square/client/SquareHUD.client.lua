@@ -215,8 +215,8 @@ local function fit()
     help.Visible = not small
     title.TextSize = if small then 16 else 20
     viewButton.Size = UDim2.fromOffset(if small then 83 else 105,29)
-    controls.Size = UDim2.fromOffset(math.min(v.X-16,if small then 360 else 490),141)
-    local available = controls.AbsoluteSize.X
+    local available = math.min(v.X-16,if small then 360 else 490)
+    controls.Size = UDim2.fromOffset(available,141)
     local targetWidth = math.max(39, math.floor((available-45)/5))
     for _, button in pairs(targetButtons) do
         button.Size = UDim2.fromOffset(targetWidth,36)
