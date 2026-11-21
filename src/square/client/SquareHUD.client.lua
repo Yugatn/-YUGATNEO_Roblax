@@ -125,7 +125,7 @@ local status = {
     revision=-1, seat=0, phase="waiting", message="Ожидание игроков.",
     server=1, receiver=0, bounceCount=0, isServe=false, seats={},
 }
-local selectedTarget = 0
+local selectedTarget = 4 -- Start with a safe opponent; the red center must be chosen deliberately.
 local targetButtons = {}
 local targetChoices = {1,2,3,4,0}
 for _, choice in ipairs(targetChoices) do
@@ -134,6 +134,10 @@ for _, choice in ipairs(targetChoices) do
     local button = makeButton("Target_"..choice,targets,text,color)
     targetButtons[choice] = button
     button.MouseButton1Click:Connect(function()
+        if choice ~= 0 then
+            local other = status.seats[choice]
+            if choice == status.seat or not other or not other.occupied or other.out then return end
+        end
         selectedTarget = choice
         aimLabel.Text = if choice == 0 then "Центральный квадрат = штраф бьющему!"
             else "Цель: квадрат игрока " .. choice
@@ -246,6 +250,7 @@ local function draw()
         local item = status.seats[choice]
         local enabled = choice == 0 or (item ~= nil and item.occupied and not item.out and choice ~= seat)
         button.AutoButtonColor = enabled
+        button.Active = enabled
         button.TextTransparency = if enabled then 0 else 0.55
         button.BackgroundTransparency = if selectedTarget == choice then 0 else 0.28
     end
