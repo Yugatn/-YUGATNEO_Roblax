@@ -143,6 +143,7 @@ sign(guide, "КВАДРАТ · ФУТБОЛ\n4 игрока · до 5 голов
 
 local lastActionAt = {}
 local motion = {t=0, start=ball.Position, finish=ball.Position, height=9, goalZone=0}
+local rng = Random.new()
 local pauseToken = 0
 local restartToken = 0
 local syncStarted = false
@@ -181,8 +182,10 @@ local function placeForServe()
 end
 
 local function launch(target)
+    -- Variation makes players track the ball and move, instead of camping in the centre.
     local destination = if target == 0 then Vector3.new(0, groundY, 0)
-        else Config.squareCenters[target] + Vector3.new(3, groundY, 3)
+        else Config.squareCenters[target] + Vector3.new(
+            rng:NextNumber(-12, 12), groundY, rng:NextNumber(-12, 12))
     motion.t = 0
     motion.start = ball.Position
     motion.finish = destination
