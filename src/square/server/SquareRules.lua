@@ -82,8 +82,17 @@ function Rules.beginServe(state, preferred)
     end
     state.server = seat
     local diagonal = ({[1]=4, [2]=3, [3]=2, [4]=1})[seat]
-    local target = Rules.nextSeat(state, diagonal)
-    if target == seat then
+    local target = if alive(state, diagonal) then diagonal else 0
+    if target == 0 then
+        for step=1,3 do
+            local candidate = ((seat + step - 1) % 4) + 1
+            if alive(state, candidate) then
+                target = candidate
+                break
+            end
+        end
+    end
+    if target == 0 then
         state.phase = "finished"
         state.winner = seat
         return false
