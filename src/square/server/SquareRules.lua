@@ -203,6 +203,10 @@ function Rules.bounce(state, zone)
         Rules.penalty(state, state.lastHitter, "Подача не по диагонали", true)
         return "fault"
     end
+    -- Only repeated landings in the SAME square count toward a missed goal.
+    if not state.isServe and state.lastBounceZone > 0 and state.lastBounceZone ~= zone then
+        state.bounceCount = 0
+    end
     state.receiver = zone
     state.lastBounceZone = zone
     state.bounceCount += 1
