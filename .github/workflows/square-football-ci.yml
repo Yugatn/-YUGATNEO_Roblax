@@ -1,0 +1,45 @@
+name: Four Square football – validate and build
+
+on:
+  push:
+    branches: [main, feature/four-square-football-20261121]
+    paths:
+      - square.project.json
+      - src/square/**
+      - tests/test_square_static.py
+      - tools/validate_rojo_manifest.py
+      - .github/workflows/square-football-ci.yml
+  pull_request:
+    branches: [main]
+    paths:
+      - square.project.json
+      - src/square/**
+      - tests/test_square_static.py
+      - tools/validate_rojo_manifest.py
+      - .github/workflows/square-football-ci.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  square-build:
+    name: Validate isolated football Place and build with Rojo
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate files and static security checks
+        run: |
+          python3 tools/validate_rojo_manifest.py default.project.json square.project.json
+          python3 -m unittest discover -s tests -p 'test_*.py' -v
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Install Rojo CLI
+        run: cargo install rojo --locked
+      - name: Build square Place without publishing
+        run: rojo build square.project.json -o four-square-football.rbxlx
+      - uses: actions/upload-artifact@v4
+        with:
+          name: four-square-football-place
+          path: four-square-football.rbxlx
+          if-no-files-found: error
+          retention-days: 14

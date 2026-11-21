@@ -1,0 +1,33 @@
+{
+  "name": "YUGATNEO_FourSquare",
+  "tree": {
+    "$className": "DataModel",
+    "ReplicatedStorage": {
+      "$className": "ReplicatedStorage",
+      "SquareShared": {
+        "$className": "Folder",
+        "SquareConfig": {
+          "$path": "src/square/shared/SquareConfig.lua"
+        }
+      }
+    },
+    "ServerScriptService": {
+      "$className": "ServerScriptService",
+      "SquareRules": {
+        "$path": "src/square/server/SquareRules.lua"
+      },
+      "SquareGame": {
+        "$path": "src/square/server/SquareGame.server.lua"
+      }
+    },
+    "StarterPlayer": {
+      "$className": "StarterPlayer",
+      "StarterPlayerScripts": {
+        "$className": "StarterPlayerScripts",
+        "SquareHUD": {
+          "$path": "src/square/client/SquareHUD.client.lua"
+        }
+      }
+    }
+  }
+}
